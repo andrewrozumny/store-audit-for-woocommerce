@@ -87,4 +87,31 @@ final class BackupsInWebrootTest extends TestCase {
 
 		$this->assertSame( 'critical', ( new BackupsInWebroot( $this->dir, $this->dir . '/uploads' ) )->run()->severity() );
 	}
+
+	/**
+	 * A folder that cannot be read is reported as such. It is neither a PHP warning nor a false "all clear".
+	 */
+	public function test_unreadable_folder_is_not_a_clean_bill(): void {
+		if ( function_exists( 'posix_geteuid' ) && 0 === posix_geteuid() ) {
+			$this->markTestSkipped( 'The root user can read any folder.' );
+		}
+		chmod( $this->dir . '/uploads', 0000 );
+		$warnings = array();
+		set_error_handler( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting,WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Catches the warning this test is about.
+			static function ( int $no, string $message ) use ( &$warnings ): bool {
+				$warnings[] = $no . ': ' . $message;
+				return true;
+			}
+		);
+		try {
+			$result = ( new BackupsInWebroot( $this->dir, $this->dir . '/uploads' ) )->run();
+		} finally {
+			restore_error_handler();
+			chmod( $this->dir . '/uploads', 0755 );
+		}
+
+		$this->assertSame( array(), $warnings );
+		$this->assertSame( 'info', $result->severity() );
+		$this->assertStringContainsString( 'uploads', implode( ' ', $result->details() ) );
+	}
 }

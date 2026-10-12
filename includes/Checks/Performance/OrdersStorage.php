@@ -96,6 +96,7 @@ final class OrdersStorage extends AbstractCheck {
 		$db   = Db::wpdb();
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
 		if ( $hpos ) {
+			Db::require_table( $db->prefix . 'wc_orders' );
 			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE type = 'shop_order'", $db->prefix . 'wc_orders' ) ) );
 		} else {
 			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'shop_order'", $db->posts ) ) );

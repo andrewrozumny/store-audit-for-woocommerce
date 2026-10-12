@@ -41,4 +41,25 @@ final class Db {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only schema lookup; there is no WordPress API for it.
 		return $table === $db->get_var( $db->prepare( 'SHOW TABLES LIKE %s', $db->esc_like( $table ) ) );
 	}
+
+	/**
+	 * Stop the check with a clear message when a table is missing. Querying a missing table would only fill the
+	 * log with database errors and read as "zero rows". The runner turns the exception into "not checked".
+	 *
+	 * @param string $table Full table name, with the prefix.
+	 * @throws \RuntimeException When the table does not exist.
+	 */
+	public static function require_table( string $table ): void {
+		if ( ! self::table_exists( $table ) ) {
+			throw new \RuntimeException(
+				esc_html(
+					sprintf(
+						/* translators: %s: database table name. */
+						__( 'the database table %s does not exist.', 'store-audit-for-woocommerce' ),
+						$table
+					)
+				)
+			);
+		}
+	}
 }

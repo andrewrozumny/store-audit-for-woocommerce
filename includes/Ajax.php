@@ -11,6 +11,7 @@ namespace StoreAudit;
 
 use StoreAudit\Checks\Section;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\Nonce;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,8 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Ajax {
 
-	public const NONCE_ACTION = 'store_audit';
-	public const RUN_OPTION   = 'store_audit_current_run';
+	public const NONCE_ACTION  = 'store_audit';
+	public const RUN_OPTION    = 'store_audit_current_run';
+	public const RESULT_PREFIX = 'store_audit_run_result_';
 
 	/**
 	 * Register hooks.
@@ -41,7 +43,7 @@ final class Ajax {
 	 * @return array{run_id:string,check_id:string}
 	 */
 	private function authorized_request(): array {
-		if ( false === check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
+		if ( ! Nonce::is_plain( 'nonce' ) || false === check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Security check failed. Reload the page and try again.', 'store-audit-for-woocommerce' ) ), 403 );
 		}
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
@@ -57,26 +59,32 @@ final class Ajax {
 	}
 
 	/**
-	 * Currently stored run, if it matches the id.
+	 * Currently stored run, if it matches the id. The run option holds only the id; each result lives in its own
+	 * option (see result_option), so two requests saving at the same time cannot overwrite each other.
 	 *
 	 * @param string $run_id Run id.
-	 * @return array{run_id:string,results:array<string,array<string,mixed>>}|null
 	 */
-	private function load_run( string $run_id ): ?array {
+	private function run_is_active( string $run_id ): bool {
 		$run = get_option( self::RUN_OPTION, null );
-		if ( '' === $run_id || ! is_array( $run ) || Arr::get_string( $run, 'run_id' ) !== $run_id ) {
-			return null;
+		return '' !== $run_id && is_array( $run ) && Arr::get_string( $run, 'run_id' ) === $run_id;
+	}
+
+	/**
+	 * Name of the option that holds the result of one check of the current run.
+	 *
+	 * @param string $check_id Check id.
+	 */
+	private function result_option( string $check_id ): string {
+		return self::RESULT_PREFIX . $check_id;
+	}
+
+	/**
+	 * Drop the stored results of any run.
+	 */
+	private function clear_results(): void {
+		foreach ( array_keys( Registry::all() ) as $check_id ) {
+			delete_option( $this->result_option( $check_id ) );
 		}
-		$results = array();
-		foreach ( Arr::get_array( $run, 'results' ) as $id => $row ) {
-			if ( is_string( $id ) ) {
-				$results[ $id ] = Arr::to_string_keyed( $row );
-			}
-		}
-		return array(
-			'run_id'  => $run_id,
-			'results' => $results,
-		);
 	}
 
 	/**
@@ -86,11 +94,11 @@ final class Ajax {
 		$this->authorized_request();
 
 		$run_id = wp_generate_uuid4();
+		$this->clear_results();
 		update_option(
 			self::RUN_OPTION,
 			array(
-				'run_id'  => $run_id,
-				'results' => array(),
+				'run_id' => $run_id,
 			),
 			false
 		);
@@ -126,8 +134,7 @@ final class Ajax {
 	public function run_check(): void {
 		$request  = $this->authorized_request();
 		$check_id = $request['check_id'];
-		$run      = $this->load_run( $request['run_id'] );
-		if ( null === $run ) {
+		if ( ! $this->run_is_active( $request['run_id'] ) ) {
 			wp_send_json_error( array( 'message' => __( 'This audit run is no longer active. Start it again.', 'store-audit-for-woocommerce' ) ), 409 );
 		}
 		$check = Registry::get( $check_id );
@@ -135,25 +142,50 @@ final class Ajax {
 			wp_send_json_error( array( 'message' => __( 'Unknown check.', 'store-audit-for-woocommerce' ) ), 404 );
 		}
 
-		$result                      = ( new Runner() )->run_one( $check );
-		$run['results'][ $check_id ] = $result;
-		update_option( self::RUN_OPTION, $run, false );
+		$result = ( new Runner() )->run_one( $check );
+		// One option per check: a parallel request for another check writes a different row.
+		update_option(
+			$this->result_option( $check_id ),
+			array(
+				'run_id' => $request['run_id'],
+				'result' => $result,
+			),
+			false
+		);
 
 		wp_send_json_success( $result );
 	}
 
 	/**
-	 * Finish a run and build the report.
+	 * Finish a run and build the report. Checks that did not run are listed as "not checked", so the report
+	 * never looks complete when it is not.
 	 */
 	public function finish(): void {
 		$request = $this->authorized_request();
-		$run     = $this->load_run( $request['run_id'] );
-		if ( null === $run ) {
+		if ( ! $this->run_is_active( $request['run_id'] ) ) {
 			wp_send_json_error( array( 'message' => __( 'This audit run is no longer active. Start it again.', 'store-audit-for-woocommerce' ) ), 409 );
 		}
 
-		$report = Report::build( array_values( $run['results'] ) );
+		$runner  = new Runner();
+		$results = array();
+		$ran     = 0;
+		foreach ( Registry::all() as $check_id => $check ) {
+			$stored = get_option( $this->result_option( $check_id ), null );
+			$row    = is_array( $stored ) && Arr::get_string( $stored, 'run_id' ) === $request['run_id'] ? Report::normalize_row( $stored['result'] ?? null ) : null;
+			if ( null === $row ) {
+				$results[] = $runner->not_run( $check );
+				continue;
+			}
+			++$ran;
+			$results[] = $row;
+		}
+		if ( 0 === $ran ) {
+			wp_send_json_error( array( 'message' => __( 'No check has run in this audit yet. Start it again.', 'store-audit-for-woocommerce' ) ), 409 );
+		}
+
+		$report = Report::build( $results );
 		Report::store_last( $report );
+		$this->clear_results();
 		delete_option( self::RUN_OPTION );
 
 		$report['generated_at_local'] = Report::local_date( Arr::get_string( $report, 'generated_at' ) );

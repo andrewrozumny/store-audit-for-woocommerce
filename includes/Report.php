@@ -76,13 +76,119 @@ final class Report {
 	}
 
 	/**
-	 * Last stored report.
+	 * Last stored report, repaired so every consumer can rely on the types. Anything that is not a report with
+	 * at least one usable result row reads as "no report".
 	 *
 	 * @return array<string,mixed>|null
 	 */
 	public static function get_last(): ?array {
-		$report = get_option( self::OPTION, null );
-		return is_array( $report ) && isset( $report['results'] ) ? Arr::to_string_keyed( $report ) : null;
+		return self::normalize( get_option( self::OPTION, null ) );
+	}
+
+	/**
+	 * Turn a stored value into a well-formed report, or null when there is nothing usable in it.
+	 *
+	 * @param mixed $stored Value of the option.
+	 * @return array<string,mixed>|null
+	 */
+	public static function normalize( mixed $stored ): ?array {
+		if ( ! is_array( $stored ) || ! isset( $stored['results'] ) || ! is_array( $stored['results'] ) ) {
+			return null;
+		}
+		$report = Arr::to_string_keyed( $stored );
+
+		$rows = array();
+		foreach ( Arr::get_array( $report, 'results' ) as $row ) {
+			$clean = self::normalize_row( $row );
+			if ( null !== $clean ) {
+				$rows[] = $clean;
+			}
+		}
+		if ( array() === $rows ) {
+			return null;
+		}
+
+		return array(
+			'generated_at'   => Arr::get_string( $report, 'generated_at' ),
+			'site_url'       => Arr::get_string( $report, 'site_url' ),
+			'plugin_version' => Arr::get_string( $report, 'plugin_version' ),
+			'wp_version'     => Arr::get_string( $report, 'wp_version' ),
+			'wc_version'     => Arr::get_string( $report, 'wc_version' ),
+			'score'          => self::normalize_score( $report['score'] ?? null, $rows ),
+			'results'        => $rows,
+		);
+	}
+
+	/**
+	 * One result row with known keys and types. An unknown severity counts as "not checked".
+	 *
+	 * @param mixed $row Stored row.
+	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int}|null
+	 */
+	public static function normalize_row( mixed $row ): ?array {
+		if ( ! is_array( $row ) ) {
+			return null;
+		}
+		$row      = Arr::to_string_keyed( $row );
+		$severity = Arr::get_string( $row, 'severity' );
+		$details  = array();
+		foreach ( Arr::get_array( $row, 'details' ) as $line ) {
+			if ( is_scalar( $line ) ) {
+				$details[] = Arr::to_string( $line );
+			}
+		}
+		return array(
+			'id'          => Arr::get_string( $row, 'id' ),
+			'section'     => Arr::get_string( $row, 'section' ),
+			'title'       => Arr::get_string( $row, 'title' ),
+			'severity'    => in_array( $severity, Result::severities(), true ) ? $severity : Result::ERROR,
+			'summary'     => Arr::get_string( $row, 'summary' ),
+			'details'     => $details,
+			'explanation' => Arr::get_string( $row, 'explanation' ),
+			'fix_hint'    => Arr::get_string( $row, 'fix_hint' ),
+			'duration_ms' => Arr::get_int( $row, 'duration_ms' ),
+		);
+	}
+
+	/**
+	 * The stored score when it has the expected shape, otherwise a score worked out from the rows.
+	 *
+	 * @param mixed                     $stored Stored score.
+	 * @param list<array<string,mixed>> $rows   Normalised rows.
+	 * @return array{overall:int,sections:array<string,array<string,mixed>>}
+	 */
+	private static function normalize_score( mixed $stored, array $rows ): array {
+		if ( is_array( $stored ) && isset( $stored['overall'], $stored['sections'] ) && is_numeric( $stored['overall'] ) && is_array( $stored['sections'] ) ) {
+			$sections = array();
+			$valid    = true;
+			foreach ( $stored['sections'] as $id => $data ) {
+				if ( ! is_string( $id ) || ! is_array( $data ) || ! isset( $data['score'], $data['label'], $data['counts'] ) || ! is_numeric( $data['score'] ) || ! is_string( $data['label'] ) || ! is_array( $data['counts'] ) ) {
+					$valid = false;
+					break;
+				}
+				$sections[ $id ] = Arr::to_string_keyed( $data );
+			}
+			if ( $valid ) {
+				return array(
+					'overall'  => Arr::to_int( $stored['overall'] ),
+					'sections' => $sections,
+				);
+			}
+		}
+		$score  = Score::calculate( $rows );
+		$labels = Section::labels();
+		$out    = array();
+		foreach ( $score['sections'] as $id => $data ) {
+			$out[ $id ] = array(
+				'label'  => $labels[ $id ] ?? $id,
+				'score'  => $data['score'],
+				'counts' => $data['counts'],
+			);
+		}
+		return array(
+			'overall'  => $score['overall'],
+			'sections' => $out,
+		);
 	}
 
 	/**
@@ -216,6 +322,17 @@ final class Report {
 	}
 
 	/**
+	 * Make text that comes from the site safe to paste into Markdown: one line, no HTML tags, no links.
+	 *
+	 * @param string $text Raw text.
+	 */
+	public static function md_text( string $text ): string {
+		$clean = preg_replace( '/[\x00-\x1F\x7F\x{2028}\x{2029}]+/u', ' ', $text );
+		$text  = null === $clean ? (string) preg_replace( '/[\x00-\x1F\x7F]+/', ' ', $text ) : $clean;
+		return str_replace( array( '<', '>', '[', ']' ), array( '\\<', '\\>', '\\[', '\\]' ), $text );
+	}
+
+	/**
 	 * Markdown export, usable as a work plan.
 	 *
 	 * @param array<string,mixed> $report Report.
@@ -225,7 +342,7 @@ final class Report {
 		$score    = Arr::get_map( $report, 'score' );
 		$sections = Arr::get_map( $score, 'sections' );
 		$time     = strtotime( Arr::get_string( $report, 'generated_at' ) );
-		$date     = false === $time ? Arr::get_string( $report, 'generated_at' ) : gmdate( 'Y-m-d H:i', $time ) . ' UTC';
+		$date     = false === $time ? self::md_text( Arr::get_string( $report, 'generated_at' ) ) : gmdate( 'Y-m-d H:i', $time ) . ' UTC';
 
 		$overall    = Arr::get_int( $score, 'overall' );
 		$wp_ver     = Arr::get_string( $report, 'wp_version' );
@@ -233,9 +350,9 @@ final class Report {
 		$plugin_ver = Arr::get_string( $report, 'plugin_version' );
 		$env        = array_filter(
 			array(
-				'' !== $wp_ver ? 'WordPress ' . $wp_ver : '',
-				'' !== $wc_ver ? 'WooCommerce ' . $wc_ver : '',
-				'' !== $plugin_ver ? 'Store Audit ' . $plugin_ver : '',
+				'' !== $wp_ver ? 'WordPress ' . self::md_text( $wp_ver ) : '',
+				'' !== $wc_ver ? 'WooCommerce ' . self::md_text( $wc_ver ) : '',
+				'' !== $plugin_ver ? 'Store Audit ' . self::md_text( $plugin_ver ) : '',
 			),
 			static fn( string $line ): bool => '' !== $line
 		);
@@ -244,7 +361,7 @@ final class Report {
 		$out[] = '# ' . sprintf(
 			/* translators: %s: site address. */
 			__( 'Store Audit report for %s', 'store-audit-for-woocommerce' ),
-			Arr::get_string( $report, 'site_url' )
+			self::md_text( Arr::get_string( $report, 'site_url' ) )
 		);
 		$out[] = '';
 		$out[] = '- ' . __( 'Date:', 'store-audit-for-woocommerce' ) . ' ' . $date;
@@ -261,7 +378,7 @@ final class Report {
 		foreach ( $sections as $id => $data ) {
 			$data   = Arr::to_string_keyed( $data );
 			$counts = Arr::get_map( $data, 'counts' );
-			$name   = Arr::get_string( $data, 'label', $labels[ $id ] ?? $id );
+			$name   = self::md_text( Arr::get_string( $data, 'label', $labels[ $id ] ?? $id ) );
 			$out[]  = '| ' . str_replace( '|', '\\|', $name ) . ' | ' . Arr::get_int( $data, 'score' ) . ' | '
 				. Arr::get_int( $counts, Result::CRITICAL ) . ' | ' . Arr::get_int( $counts, Result::WARNING ) . ' | '
 				. Arr::get_int( $counts, Result::INFO ) . ' | ' . Arr::get_int( $counts, Result::OK ) . ' |';
@@ -270,7 +387,7 @@ final class Report {
 
 		foreach ( self::group_by_section( $report ) as $id => $rows ) {
 			$section_data = Arr::get_map( $sections, $id );
-			$name         = Arr::get_string( $section_data, 'label', $labels[ $id ] ?? $id );
+			$name         = self::md_text( Arr::get_string( $section_data, 'label', $labels[ $id ] ?? $id ) );
 			$head         = '## ' . $name;
 			if ( isset( $section_data['score'] ) ) {
 				$head .= ' (' . Arr::get_int( $section_data, 'score' ) . ' / 100)';
@@ -281,24 +398,24 @@ final class Report {
 			$passed = array();
 			foreach ( $rows as $row ) {
 				if ( Result::OK === ( $row['severity'] ?? '' ) ) {
-					$passed[] = Arr::get_string( $row, 'title' );
+					$passed[] = self::md_text( Arr::get_string( $row, 'title' ) );
 				} else {
 					$issues[] = $row;
 				}
 			}
 			foreach ( self::sort_issues( $issues ) as $row ) {
-				$out[]   = '### ' . self::severity_label( Arr::get_string( $row, 'severity' ) ) . ': ' . Arr::get_string( $row, 'title' );
+				$out[]   = '### ' . self::severity_label( Arr::get_string( $row, 'severity' ) ) . ': ' . self::md_text( Arr::get_string( $row, 'title' ) );
 				$out[]   = '';
-				$out[]   = Arr::get_string( $row, 'summary' );
+				$out[]   = self::md_text( Arr::get_string( $row, 'summary' ) );
 				$out[]   = '';
-				$hint    = Arr::get_string( $row, 'fix_hint' );
+				$hint    = self::md_text( Arr::get_string( $row, 'fix_hint' ) );
 				$details = Arr::get_array( $row, 'details' );
 				if ( '' !== $hint ) {
 					$out[] = '**' . __( 'What to do:', 'store-audit-for-woocommerce' ) . '** ' . $hint;
 					$out[] = '';
 				}
 				foreach ( $details as $line ) {
-					$out[] = '- ' . Arr::to_string( $line );
+					$out[] = '- ' . self::md_text( Arr::to_string( $line ) );
 				}
 				if ( array() !== $details ) {
 					$out[] = '';

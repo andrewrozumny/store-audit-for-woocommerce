@@ -63,6 +63,27 @@ final class Runner {
 	}
 
 	/**
+	 * The row for a check that did not run, for example because the audit was stopped half way. It counts as
+	 * "not checked" and never as a pass.
+	 *
+	 * @param CheckInterface $check Check.
+	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int}
+	 */
+	public function not_run( CheckInterface $check ): array {
+		return array(
+			'id'          => $check->id(),
+			'section'     => $check->section(),
+			'title'       => $check->title(),
+			'severity'    => Result::ERROR,
+			'summary'     => __( 'This check did not run, so it is not part of the score. Run the audit again.', 'store-audit-for-woocommerce' ),
+			'details'     => array(),
+			'explanation' => $check->explanation(),
+			'fix_hint'    => '',
+			'duration_ms' => 0,
+		);
+	}
+
+	/**
 	 * Run every registered check (CLI).
 	 *
 	 * @return list<array<string,mixed>>

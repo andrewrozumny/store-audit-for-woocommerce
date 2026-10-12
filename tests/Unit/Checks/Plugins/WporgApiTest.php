@@ -141,4 +141,34 @@ final class WporgApiTest extends TestCase {
 
 		$this->assertSame( 'found', $api->theme( 'storefront' )['status'] );
 	}
+
+	/**
+	 * The reason text comes from a remote server. It is cut to a short single line without tags before it is
+	 * cached and shown, so one odd answer cannot bloat the report or the options table.
+	 */
+	public function test_closed_reason_is_short_and_plain(): void {
+		$long = '<script>alert(1)</script>' . str_repeat( "long reason\n", 20000 );
+		$api  = $this->api(
+			array(
+				'code' => 404,
+				'body' => (string) json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test fixture.
+					array(
+						'error'       => 'closed',
+						'closed'      => true,
+						'reason_text' => $long,
+					)
+				),
+			)
+		);
+
+		$info = $api->plugin( 'some-plugin' );
+
+		$this->assertSame( 'closed', $info['status'] );
+		$this->assertLessThanOrEqual( 303, strlen( $info['reason'] ) );
+		$this->assertStringNotContainsString( '<', $info['reason'] );
+		$this->assertStringNotContainsString( "\n", $info['reason'] );
+		$this->assertStringContainsString( 'long reason', $info['reason'] );
+		$cached = array_values( $this->cache );
+		$this->assertLessThan( 1000, strlen( serialize( $cached ) ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Size check only.
+	}
 }

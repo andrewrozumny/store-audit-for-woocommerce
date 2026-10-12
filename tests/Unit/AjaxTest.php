@@ -82,4 +82,21 @@ final class AjaxTest extends TestCase {
 		$this->expectExceptionMessage( 'json_error:403' );
 		( new Ajax() )->markdown();
 	}
+
+	/**
+	 * A nonce sent as an array is refused without WordPress ever turning it into a string (which raises a PHP warning).
+	 */
+	public function test_array_nonce_is_rejected_before_core_sees_it(): void {
+		Functions\expect( 'check_ajax_referer' )->never();
+		$_REQUEST = array( 'nonce' => array( 'x' ) );
+
+		try {
+			( new Ajax() )->start();
+			$this->fail( 'The request was not refused.' );
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'json_error:403', $e->getMessage() );
+		} finally {
+			$_REQUEST = array();
+		}
+	}
 }

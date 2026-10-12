@@ -170,4 +170,31 @@ final class ReportExportTest extends TestCase {
 	public function test_filename(): void {
 		$this->assertSame( 'store-audit-shop.example.com-2026-10-12.json', Report::filename( $this->report(), 'json' ) );
 	}
+
+	/**
+	 * Text that comes from the site (plugin, theme and file names) cannot inject HTML, links or new
+	 * Markdown blocks into a report that is pasted into a ticket or a chat.
+	 */
+	public function test_markdown_neutralises_site_text(): void {
+		$report              = $this->report();
+		$report['results'][] = array(
+			'id'          => 'x',
+			'section'     => 'security',
+			'title'       => '<script>alert(1)</script>',
+			'severity'    => 'critical',
+			'summary'     => '"><img src=x onerror=alert(1)>',
+			'details'     => array( "line one\n# Fake heading", '[click](javascript:alert(1))', "tab\tand\r\ncrlf" ),
+			'explanation' => '',
+			'fix_hint'    => '<b>bold</b>',
+			'duration_ms' => 1,
+		);
+
+		$markdown = str_replace( Report::attribution_markdown(), '', Report::to_markdown( $report ) );
+
+		$this->assertDoesNotMatchRegularExpression( '/(^|[^\\\\])<[a-zA-Z\/!]/', $markdown, 'an HTML tag is left in the Markdown' );
+		$this->assertDoesNotMatchRegularExpression( '/(^|[^\\\\])\[[^\]]*\]\(/', $markdown, 'a Markdown link built from site text' );
+		$this->assertStringNotContainsString( "\n# Fake heading", $markdown );
+		$this->assertStringNotContainsString( "\r", $markdown );
+		$this->assertStringContainsString( 'alert(1)', $markdown, 'the text itself must still be readable' );
+	}
 }

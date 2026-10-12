@@ -363,7 +363,14 @@
 				return post( 'store_audit_finish', { run_id: run.run_id }, CHECK_TIMEOUT_MS );
 			} );
 		} ).then( function ( report ) {
-			report.results = ( report.results || [] ).concat( failed );
+			// The server already lists every check that did not run; add only the ones it does not know about.
+			var known = {};
+			( report.results || [] ).forEach( function ( row ) {
+				known[ row.id ] = true;
+			} );
+			report.results = ( report.results || [] ).concat( failed.filter( function ( row ) {
+				return ! known[ row.id ];
+			} ) );
 			render( report );
 			showLast( report );
 		} ).catch( function ( err ) {

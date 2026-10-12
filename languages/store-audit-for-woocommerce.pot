@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T17:14:59+00:00\n"
+"POT-Creation-Date: 2026-10-12T18:45:04+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: store-audit-for-woocommerce\n"
@@ -51,7 +51,7 @@ msgid "Run your first audit"
 msgstr ""
 
 #: includes/Admin/DashboardWidget.php:108
-#: includes/Admin/Exports.php:188
+#: includes/Admin/Exports.php:189
 #: includes/Admin/Page.php:120
 msgid "out of 100"
 msgstr ""
@@ -70,85 +70,85 @@ msgstr ""
 msgid "Open full report"
 msgstr ""
 
-#: includes/Admin/Exports.php:50
+#: includes/Admin/Exports.php:51
 msgid "You are not allowed to export the audit report."
 msgstr ""
 
-#: includes/Admin/Exports.php:53
-#: includes/Ajax.php:45
+#: includes/Admin/Exports.php:54
+#: includes/Ajax.php:47
 msgid "Security check failed. Reload the page and try again."
 msgstr ""
 
-#: includes/Admin/Exports.php:66
-#: includes/Ajax.php:171
+#: includes/Admin/Exports.php:67
+#: includes/Ajax.php:203
 msgid "There is no audit report yet. Run the audit first."
 msgstr ""
 
-#: includes/Admin/Exports.php:71
+#: includes/Admin/Exports.php:72
 msgid "Go to Store Audit"
 msgstr ""
 
 #. translators: %s: site address.
-#: includes/Admin/Exports.php:133
-#: includes/Report.php:246
+#: includes/Admin/Exports.php:134
+#: includes/Report.php:363
 #, php-format
 msgid "Store Audit report for %s"
 msgstr ""
 
-#: includes/Admin/Exports.php:183
+#: includes/Admin/Exports.php:184
 msgid "Store Audit report"
 msgstr ""
 
-#: includes/Admin/Exports.php:190
+#: includes/Admin/Exports.php:191
 #: includes/Admin/Page.php:156
 msgid "Print / Save as PDF"
 msgstr ""
 
-#: includes/Admin/Exports.php:196
-#: includes/Report.php:259
+#: includes/Admin/Exports.php:197
+#: includes/Report.php:376
 msgid "Section"
 msgstr ""
 
-#: includes/Admin/Exports.php:197
-#: includes/Report.php:259
+#: includes/Admin/Exports.php:198
+#: includes/Report.php:376
 msgid "Score"
 msgstr ""
 
-#: includes/Admin/Exports.php:198
+#: includes/Admin/Exports.php:199
 #: includes/Admin/Page.php:103
 #: includes/Admin/Page.php:124
-#: includes/Report.php:206
-#: includes/Report.php:259
+#: includes/Report.php:312
+#: includes/Report.php:376
 msgid "Critical"
 msgstr ""
 
-#: includes/Admin/Exports.php:199
+#: includes/Admin/Exports.php:200
 #: includes/Admin/Page.php:104
-#: includes/Report.php:259
+#: includes/Report.php:376
 msgid "Warnings"
 msgstr ""
 
-#: includes/Admin/Exports.php:200
+#: includes/Admin/Exports.php:201
 #: includes/Admin/Page.php:105
 #: includes/Admin/Page.php:126
-#: includes/Report.php:210
-#: includes/Report.php:259
+#: includes/Report.php:316
+#: includes/Report.php:376
 msgid "Info"
 msgstr ""
 
-#: includes/Admin/Exports.php:201
+#: includes/Admin/Exports.php:202
 #: includes/Admin/Page.php:106
-#: includes/Report.php:259
+#: includes/Report.php:376
 msgid "Passed"
 msgstr ""
 
-#: includes/Admin/Exports.php:242
-#: includes/Report.php:297
+#: includes/Admin/Exports.php:243
+#: includes/Report.php:414
 msgid "What to do:"
 msgstr ""
 
-#: includes/Admin/Exports.php:255
-#: includes/Report.php:308
+#: includes/Admin/Exports.php:256
+#: includes/Report.php:425
 msgid "Passed checks"
 msgstr ""
 
@@ -170,7 +170,7 @@ msgstr ""
 
 #: includes/Admin/Page.php:107
 #: includes/Admin/Page.php:128
-#: includes/Report.php:214
+#: includes/Report.php:320
 msgid "Not checked"
 msgstr ""
 
@@ -232,12 +232,12 @@ msgid "No checks are registered yet."
 msgstr ""
 
 #: includes/Admin/Page.php:125
-#: includes/Report.php:208
+#: includes/Report.php:314
 msgid "Warning"
 msgstr ""
 
 #: includes/Admin/Page.php:127
-#: includes/Report.php:212
+#: includes/Report.php:318
 msgid "OK"
 msgstr ""
 
@@ -261,17 +261,21 @@ msgstr ""
 msgid "Report as Markdown"
 msgstr ""
 
-#: includes/Ajax.php:48
+#: includes/Ajax.php:50
 msgid "You are not allowed to run the audit."
 msgstr ""
 
-#: includes/Ajax.php:131
-#: includes/Ajax.php:152
+#: includes/Ajax.php:138
+#: includes/Ajax.php:166
 msgid "This audit run is no longer active. Start it again."
 msgstr ""
 
-#: includes/Ajax.php:135
+#: includes/Ajax.php:142
 msgid "Unknown check."
+msgstr ""
+
+#: includes/Ajax.php:183
+msgid "No check has run in this audit yet. Start it again."
 msgstr ""
 
 #: includes/Checks/Environment/Cron.php:61
@@ -500,27 +504,27 @@ msgstr ""
 msgid "Ask your host to enable Redis or Memcached and install the matching object cache plugin."
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:118
+#: includes/Checks/Environment/ObjectCache.php:119
 msgid "A persistent object cache is in use."
 msgstr ""
 
 #. translators: %d: number of products.
-#: includes/Checks/Environment/ObjectCache.php:124
+#: includes/Checks/Environment/ObjectCache.php:125
 #, php-format
 msgid "Published products: %d"
 msgstr ""
 
 #. translators: %d: number of orders.
-#: includes/Checks/Environment/ObjectCache.php:126
+#: includes/Checks/Environment/ObjectCache.php:127
 #, php-format
 msgid "Orders: %d"
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:130
+#: includes/Checks/Environment/ObjectCache.php:131
 msgid "There is no persistent object cache, and the store is large enough to benefit from one."
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:132
+#: includes/Checks/Environment/ObjectCache.php:133
 msgid "There is no persistent object cache. It is not needed yet at this store size."
 msgstr ""
 
@@ -924,27 +928,27 @@ msgstr ""
 msgid "Switch to High-Performance Order Storage in WooCommerce > Settings > Advanced > Features (back up first and check your plugins support it)."
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:119
+#: includes/Checks/Performance/OrdersStorage.php:120
 msgid "WooCommerce is not active, so there are no orders to count."
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:123
+#: includes/Checks/Performance/OrdersStorage.php:124
 msgid "dedicated orders tables (HPOS)"
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:123
+#: includes/Checks/Performance/OrdersStorage.php:124
 msgid "the posts tables (legacy)"
 msgstr ""
 
 #. translators: 1: number of orders, 2: storage type.
-#: includes/Checks/Performance/OrdersStorage.php:126
+#: includes/Checks/Performance/OrdersStorage.php:127
 #, php-format
 msgid "%1$d order, stored in %2$s."
 msgid_plural "%1$d orders, stored in %2$s."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Performance/OrdersStorage.php:132
+#: includes/Checks/Performance/OrdersStorage.php:133
 msgid "With this many orders the legacy storage slows down the admin and reports."
 msgstr ""
 
@@ -1442,12 +1446,22 @@ msgstr ""
 msgid "Move backups out of the web folder (or into a protected storage) and delete old copies."
 msgstr ""
 
-#: includes/Checks/Security/BackupsInWebroot.php:106
+#: includes/Checks/Security/BackupsInWebroot.php:108
+msgid "Some folders could not be read, so backup files in them could not be looked for."
+msgstr ""
+
+#. translators: %s: folder name.
+#: includes/Checks/Security/BackupsInWebroot.php:112
+#, php-format
+msgid "Could not read: %s"
+msgstr ""
+
+#: includes/Checks/Security/BackupsInWebroot.php:121
 msgid "No backup or database dump files found in the site root or uploads."
 msgstr ""
 
 #. translators: %d: number of files.
-#: includes/Checks/Security/BackupsInWebroot.php:119
+#: includes/Checks/Security/BackupsInWebroot.php:134
 #, php-format
 msgid "%d backup or dump file sits in a public folder."
 msgid_plural "%d backup or dump files sit in public folders."
@@ -1900,28 +1914,28 @@ msgstr ""
 msgid "Shop page"
 msgstr ""
 
-#: includes/Checks/WooCommerce/ShippingZones.php:61
+#: includes/Checks/WooCommerce/ShippingZones.php:62
 msgid "Shipping zones"
 msgstr ""
 
-#: includes/Checks/WooCommerce/ShippingZones.php:68
+#: includes/Checks/WooCommerce/ShippingZones.php:69
 msgid "A shipping zone without any enabled shipping method means customers from that region cannot check out, or see no way to receive their order. That is lost sales."
 msgstr ""
 
-#: includes/Checks/WooCommerce/ShippingZones.php:75
+#: includes/Checks/WooCommerce/ShippingZones.php:76
 msgid "In WooCommerce, Settings, Shipping, add at least one shipping method to every zone (flat rate, free shipping or local pickup)."
 msgstr ""
 
-#: includes/Checks/WooCommerce/ShippingZones.php:86
+#: includes/Checks/WooCommerce/ShippingZones.php:87
 msgid "Shipping is turned off in WooCommerce."
 msgstr ""
 
-#: includes/Checks/WooCommerce/ShippingZones.php:99
+#: includes/Checks/WooCommerce/ShippingZones.php:100
 msgid "No shipping zones are set up (no products that need shipping were found)."
 msgstr ""
 
 #. translators: %d: number of zones.
-#: includes/Checks/WooCommerce/ShippingZones.php:104
+#: includes/Checks/WooCommerce/ShippingZones.php:105
 #, php-format
 msgid "%d shipping zone has no enabled shipping method."
 msgid_plural "%d shipping zones have no enabled shipping method."
@@ -1929,14 +1943,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of zones.
-#: includes/Checks/WooCommerce/ShippingZones.php:114
+#: includes/Checks/WooCommerce/ShippingZones.php:115
 #, php-format
 msgid "Every shipping zone (%d) has at least one shipping method."
 msgid_plural "Every shipping zone (%d) has at least one shipping method."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/WooCommerce/ShippingZones.php:141
+#: includes/Checks/WooCommerce/ShippingZones.php:145
 msgid "Locations not covered by other zones"
 msgstr ""
 
@@ -2104,24 +2118,34 @@ msgstr[1] ""
 msgid "Store Audit for WooCommerce needs WooCommerce to be installed and active."
 msgstr ""
 
-#: includes/Report.php:250
+#: includes/Report.php:367
 msgid "Date:"
 msgstr ""
 
-#: includes/Report.php:251
+#: includes/Report.php:368
 msgid "Overall score:"
 msgstr ""
 
-#: includes/Report.php:253
+#: includes/Report.php:370
 msgid "Versions:"
 msgstr ""
 
-#: includes/Report.php:257
+#: includes/Report.php:374
 msgid "Scores by section"
 msgstr ""
 
 #. translators: %s: error message.
-#: includes/Runner.php:45
+#: includes/Runner.php:44
 #, php-format
 msgid "Could not check: %s"
+msgstr ""
+
+#: includes/Runner.php:78
+msgid "This check did not run, so it is not part of the score. Run the audit again."
+msgstr ""
+
+#. translators: %s: database table name.
+#: includes/Support/Db.php:58
+#, php-format
+msgid "the database table %s does not exist."
 msgstr ""

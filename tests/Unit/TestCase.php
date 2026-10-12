@@ -25,5 +25,8 @@ abstract class TestCase extends BrainMonkeyTestCase {
 		Functions\stubTranslationFunctions();
 		Functions\stubEscapeFunctions();
 		Functions\when( 'sanitize_text_field' )->returnArg();
+		Functions\when( 'wp_strip_all_tags' )->alias(
+			static fn( string $text ): string => trim( (string) preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', (string) preg_replace( '/<[^>]*>/', '', $text ) ) )
+		);
 	}
 }

@@ -186,7 +186,7 @@ final class WporgApi {
 					$empty,
 					array(
 						'status' => self::CLOSED,
-						'reason' => isset( $data['reason_text'] ) && is_string( $data['reason_text'] ) ? $data['reason_text'] : '',
+						'reason' => isset( $data['reason_text'] ) && is_string( $data['reason_text'] ) ? self::short_text( $data['reason_text'] ) : '',
 					)
 				);
 			}
@@ -212,6 +212,16 @@ final class WporgApi {
 			'last_updated' => $last_updated,
 			'reason'       => '',
 		);
+	}
+
+	/**
+	 * Text from a remote answer as one short plain line (at most 300 characters).
+	 *
+	 * @param string $text Raw text.
+	 */
+	private static function short_text( string $text ): string {
+		$text = trim( (string) preg_replace( '/\s+/', ' ', wp_strip_all_tags( $text ) ) );
+		return mb_strlen( $text ) > 300 ? mb_substr( $text, 0, 300 ) . '...' : $text;
 	}
 
 	/**

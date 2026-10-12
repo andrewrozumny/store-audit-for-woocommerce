@@ -110,6 +110,7 @@ final class Taxes extends AbstractCheck {
 		$rates   = 0;
 		if ( $enabled ) {
 			$db = Db::wpdb();
+			Db::require_table( $db->prefix . 'woocommerce_tax_rates' );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Cheap COUNT on a small table; there is no WooCommerce API for a bare count.
 			$rates = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $db->prefix . 'woocommerce_tax_rates' ) ) );
 		}

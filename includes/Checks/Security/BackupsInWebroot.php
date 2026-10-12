@@ -93,13 +93,28 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 			$uploads = $info['basedir'];
 		}
 
-		$budget = self::MAX_ENTRIES;
-		$found  = $this->scan( $root, '', $budget );
+		$budget     = self::MAX_ENTRIES;
+		$unreadable = array();
+		$found      = $this->scan( $root, '', $budget, $unreadable );
 		if ( '' !== $uploads ) {
-			$found = array_merge( $found, $this->scan( $uploads, 'uploads/', $budget ) );
+			$found = array_merge( $found, $this->scan( $uploads, 'uploads/', $budget, $unreadable ) );
 			foreach ( $this->year_folders( $uploads, $budget ) as $year ) {
-				$found = array_merge( $found, $this->scan( trailingslashit( $uploads ) . $year, 'uploads/' . $year . '/', $budget ) );
+				$found = array_merge( $found, $this->scan( trailingslashit( $uploads ) . $year, 'uploads/' . $year . '/', $budget, $unreadable ) );
 			}
+		}
+
+		if ( array() === $found && array() !== $unreadable ) {
+			return Result::info(
+				__( 'Some folders could not be read, so backup files in them could not be looked for.', 'store-audit-for-woocommerce' ),
+				array_map(
+					static fn( string $label ): string => sprintf(
+						/* translators: %s: folder name. */
+						__( 'Could not read: %s', 'store-audit-for-woocommerce' ),
+						'' === $label ? '/' : $label
+					),
+					$unreadable
+				)
+			);
 		}
 
 		if ( array() === $found ) {
@@ -125,15 +140,20 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 	/**
 	 * Backup-like files in the top level of a directory.
 	 *
-	 * @param string $dir    Directory.
-	 * @param string $prefix Label prefix.
-	 * @param int    $budget Remaining entries to inspect (by reference).
+	 * @param string            $dir    Directory.
+	 * @param string            $prefix Label prefix.
+	 * @param int               $budget Remaining entries to inspect (by reference).
+	 * @param array<int,string> $unreadable Labels of folders that exist but cannot be read (by reference).
 	 * @return list<array{name:string,size:int}>
 	 */
-	private function scan( string $dir, string $prefix, int &$budget ): array {
-		$out     = array();
-		$entries = is_dir( $dir ) ? scandir( $dir ) : false;
+	private function scan( string $dir, string $prefix, int &$budget, array &$unreadable ): array {
+		$out = array();
+		if ( ! is_dir( $dir ) ) {
+			return $out;
+		}
+		$entries = is_readable( $dir ) ? scandir( $dir ) : false;
 		if ( false === $entries ) {
+			$unreadable[] = $prefix;
 			return $out;
 		}
 		foreach ( $entries as $entry ) {
@@ -165,7 +185,7 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 	 * @return list<string>
 	 */
 	private function year_folders( string $uploads, int &$budget ): array {
-		$entries = is_dir( $uploads ) ? scandir( $uploads ) : false;
+		$entries = is_dir( $uploads ) && is_readable( $uploads ) ? scandir( $uploads ) : false;
 		$years   = array();
 		if ( false === $entries ) {
 			return $years;

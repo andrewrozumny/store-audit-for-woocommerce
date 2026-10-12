@@ -91,4 +91,23 @@ final class ExportsTest extends TestCase {
 		$this->assertStringContainsString( 'Fix it', $html );
 		$this->assertStringContainsString( 'is-poor', $html );
 	}
+
+	/**
+	 * A nonce sent as an array ends the request with 403 and never reaches the core check.
+	 */
+	public function test_array_nonce_dies_before_core_sees_it(): void {
+		Functions\when( 'current_user_can' )->justReturn( true );
+		Functions\expect( 'check_admin_referer' )->never();
+		Functions\expect( 'wp_die' )->once()->with( \Mockery::type( 'string' ), '', array( 'response' => 403 ) )->andThrow( new \RuntimeException( 'died' ) );
+		$_REQUEST = array( '_wpnonce' => array( 'x' ) );
+
+		try {
+			( new Exports() )->authorize();
+			$this->fail( 'The request was not refused.' );
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'died', $e->getMessage() );
+		} finally {
+			$_REQUEST = array();
+		}
+	}
 }

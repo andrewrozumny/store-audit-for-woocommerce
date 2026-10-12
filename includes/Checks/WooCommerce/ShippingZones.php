@@ -14,6 +14,7 @@ use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -123,6 +124,9 @@ final class ShippingZones extends AbstractCheck {
 	 * @return array{enabled:bool,sells_shippable:bool,fallback:bool,zones:list<array{name:string,methods:int}>}
 	 */
 	private function read_zones(): array {
+		$db = Db::wpdb();
+		Db::require_table( $db->prefix . 'woocommerce_shipping_zones' );
+		Db::require_table( $db->prefix . 'woocommerce_shipping_zone_methods' );
 		$zones = array();
 		foreach ( \WC_Shipping_Zones::get_zones() as $raw_zone ) {
 			$zone    = Arr::to_string_keyed( $raw_zone );

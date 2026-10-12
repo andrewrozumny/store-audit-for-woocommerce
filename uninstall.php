@@ -11,5 +11,6 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-delete_option( 'store_audit_last_report' );
-delete_option( 'store_audit_current_run' );
+require_once __DIR__ . '/includes/autoload.php';
+
+\StoreAudit\Uninstall::run();

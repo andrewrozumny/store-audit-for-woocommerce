@@ -13,6 +13,7 @@ use StoreAudit\Checks\Section;
 use StoreAudit\Report;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\Nonce;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -49,7 +50,7 @@ final class Exports {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You are not allowed to export the audit report.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
-		if ( false === check_admin_referer( self::NONCE_ACTION ) ) {
+		if ( ! Nonce::is_plain( '_wpnonce' ) || false === check_admin_referer( self::NONCE_ACTION ) ) {
 			wp_die( esc_html__( 'Security check failed. Reload the page and try again.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
 	}

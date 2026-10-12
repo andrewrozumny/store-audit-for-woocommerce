@@ -95,6 +95,7 @@ final class ObjectCache extends AbstractCheck {
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only count for the audit; there is no cheaper WooCommerce API.
 		if ( class_exists( OrderUtil::class ) && OrderUtil::custom_orders_table_usage_is_enabled() ) {
+			Db::require_table( $db->prefix . 'wc_orders' );
 			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE type = 'shop_order'", $db->prefix . 'wc_orders' ) ) );
 		} else {
 			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'shop_order'", $db->posts ) ) );

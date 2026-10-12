@@ -36,17 +36,17 @@ final class PluginsThemeChild extends AbstractCheck {
 	/**
 	 * Context: array{template:string,stylesheet:string,name:string}.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $theme;
+	private \Closure $theme;
 
 	/**
 	 * File lister: receives the parent theme directory path, returns array<string,int> relative file => mtime
 	 * (only .php and .css files; must include 'style.css').
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $files;
+	private \Closure $files;
 
 	/**
 	 * Wordpress.org client.
@@ -58,9 +58,9 @@ final class PluginsThemeChild extends AbstractCheck {
 	/**
 	 * Parent theme directory.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $directory;
+	private \Closure $directory;
 
 	/**
 	 * Constructor.
@@ -71,7 +71,7 @@ final class PluginsThemeChild extends AbstractCheck {
 	 * @param callable|null $directory Parent theme directory override for tests.
 	 */
 	public function __construct( ?callable $theme = null, ?callable $files = null, ?WporgApi $api = null, ?callable $directory = null ) {
-		$this->theme     = $theme ?? static function (): array {
+		$theme         ??= static function (): array {
 			$parent = wp_get_theme( get_template() );
 			return array(
 				'template'   => get_template(),
@@ -79,9 +79,10 @@ final class PluginsThemeChild extends AbstractCheck {
 				'name'       => $parent->exists() ? $parent->get( 'Name' ) : get_template(),
 			);
 		};
-		$this->files     = $files ?? array( $this, 'list_files' );
+		$this->theme     = \Closure::fromCallable( $theme );
+		$this->files     = \Closure::fromCallable( $files ?? array( $this, 'list_files' ) );
 		$this->api       = $api ?? new WporgApi();
-		$this->directory = $directory ?? static fn(): string => get_template_directory();
+		$this->directory = \Closure::fromCallable( $directory ?? static fn(): string => get_template_directory() );
 	}
 
 	/**
@@ -128,26 +129,8 @@ final class PluginsThemeChild extends AbstractCheck {
 		$stylesheet = Arr::get_string( $theme, 'stylesheet' );
 		$theme_name = Arr::get_string( $theme, 'name' );
 
-		$lookup = $this->api->theme( $parent );
-		$origin = WporgApi::FOUND === $lookup['status']
-			? sprintf(
-				/* translators: %s: version number. */
-				__( 'wordpress.org theme, version %s', 'store-audit-for-woocommerce' ),
-				$lookup['version']
-			)
-			: __( 'not listed on wordpress.org', 'store-audit-for-woocommerce' );
-
-		$files  = Arr::to_array( ( $this->files )( Arr::to_string( ( $this->directory )() ) ) );
-		$edited = array();
-		if ( isset( $files['style.css'] ) ) {
-			$baseline = Arr::to_int( $files['style.css'] );
-			foreach ( $files as $relative => $mtime ) {
-				if ( 'style.css' !== $relative && Arr::to_int( $mtime ) > $baseline + self::TOLERANCE ) {
-					$edited[] = (string) $relative;
-				}
-			}
-			sort( $edited );
-		}
+		$origin = self::origin( $this->api->theme( $parent ) );
+		$edited = self::edited_files( Arr::to_array( ( $this->files )( Arr::to_string( ( $this->directory )() ) ) ) );
 
 		if ( array() !== $edited ) {
 			$shown = array_slice( $edited, 0, self::MAX_FILES );
@@ -189,6 +172,43 @@ final class PluginsThemeChild extends AbstractCheck {
 				$origin
 			)
 		);
+	}
+
+	/**
+	 * Where the parent theme comes from, as shown in the summary.
+	 *
+	 * @param array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool} $lookup Result of the wordpress.org theme lookup.
+	 */
+	private static function origin( array $lookup ): string {
+		if ( WporgApi::FOUND !== $lookup['status'] ) {
+			return __( 'not listed on wordpress.org', 'store-audit-for-woocommerce' );
+		}
+		return sprintf(
+			/* translators: %s: version number. */
+			__( 'wordpress.org theme, version %s', 'store-audit-for-woocommerce' ),
+			$lookup['version']
+		);
+	}
+
+	/**
+	 * Files modified well after the theme's style.css, which is how an edited theme shows. Empty when style.css is
+	 * not in the list.
+	 *
+	 * @param array<mixed> $files File => modification time.
+	 * @return list<string>
+	 */
+	private static function edited_files( array $files ): array {
+		$edited = array();
+		if ( isset( $files['style.css'] ) ) {
+			$baseline = Arr::to_int( $files['style.css'] );
+			foreach ( $files as $relative => $mtime ) {
+				if ( 'style.css' !== $relative && Arr::to_int( $mtime ) > $baseline + self::TOLERANCE ) {
+					$edited[] = (string) $relative;
+				}
+			}
+			sort( $edited );
+		}
+		return $edited;
 	}
 
 	/**

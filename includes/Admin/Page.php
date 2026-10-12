@@ -12,6 +12,8 @@ namespace StoreAudit\Admin;
 use StoreAudit\Ajax;
 use StoreAudit\Checks\Section;
 use StoreAudit\Report;
+use StoreAudit\ReportStore;
+use StoreAudit\ReportView;
 use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -70,7 +72,7 @@ final class Page {
 		wp_enqueue_style( 'store-audit-admin', STORE_AUDIT_URL . 'resources/admin.css', array(), STORE_AUDIT_VERSION );
 		wp_enqueue_script( 'store-audit-admin', STORE_AUDIT_URL . 'resources/admin.js', array(), STORE_AUDIT_VERSION, true );
 
-		$last = Report::get_last();
+		$last = ReportStore::get_last();
 		if ( null !== $last ) {
 			$last['generated_at_local'] = Report::local_date( Arr::get_string( $last, 'generated_at' ) );
 		}
@@ -80,6 +82,7 @@ final class Page {
 			'nonce'      => wp_create_nonce( Ajax::NONCE_ACTION ),
 			'lastReport' => $last,
 			'sections'   => Section::labels(),
+			'severities' => ReportView::severity_order(),
 			'strings'    => $this->strings(),
 		);
 		wp_add_inline_script(
@@ -139,7 +142,7 @@ final class Page {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to view this page.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
-		$has_report = null !== Report::get_last();
+		$has_report = null !== ReportStore::get_last();
 		?>
 		<div class="wrap store-audit">
 			<h1><?php echo esc_html__( 'Store Audit', 'store-audit-for-woocommerce' ); ?></h1>

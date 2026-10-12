@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\DetailList;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -124,7 +125,10 @@ final class PluginsDuplicates extends AbstractCheck {
 		/**
 		 * Filters the categories of plugins that should not be active together.
 		 *
+		 * @since 0.1.0
+		 *
 		 * @param array<string,list<string>> $groups Category label => plugin slugs.
+		 * @return array<string,list<string>> The categories to check, label => plugin slugs.
 		 */
 		return apply_filters( 'store_audit_duplicate_groups', self::GROUPS );
 	}

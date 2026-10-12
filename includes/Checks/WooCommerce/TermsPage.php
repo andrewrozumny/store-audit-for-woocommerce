@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
@@ -27,9 +26,9 @@ final class TermsPage extends AbstractCheck {
 	/**
 	 * Returns array{id:int,status:string}.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Constructor.
@@ -37,7 +36,7 @@ final class TermsPage extends AbstractCheck {
 	 * @param callable|null $source Data source override for tests.
 	 */
 	public function __construct( ?callable $source = null ) {
-		$this->source = $source ?? static function (): array {
+		$source     ??= static function (): array {
 			$id   = function_exists( 'wc_terms_and_conditions_page_id' ) ? wc_terms_and_conditions_page_id() : 0;
 			$post = $id > 0 ? get_post( $id ) : null;
 			return array(
@@ -45,6 +44,7 @@ final class TermsPage extends AbstractCheck {
 				'status' => $post instanceof \WP_Post ? $post->post_status : '',
 			);
 		};
+		$this->source = \Closure::fromCallable( $source );
 	}
 
 	/**

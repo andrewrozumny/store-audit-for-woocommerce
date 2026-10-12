@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace StoreAudit;
 
+use StoreAudit\Support\ActivePlugins;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -52,6 +54,14 @@ final class Plugin {
 	 * Whether the Pro layer is active. Free build always returns false unless filtered.
 	 */
 	public static function is_pro(): bool {
+		/**
+		 * Filters whether the Pro layer is active. The free build returns false; a Pro add-on returns true. The
+		 * callback returns the new value (true when the Pro layer is active).
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param bool|int|string $is_pro Whether the Pro layer is active. Default false. Any truthy value counts as true.
+		 */
 		return (bool) apply_filters( 'store_audit_is_pro', false );
 	}
 
@@ -88,12 +98,7 @@ final class Plugin {
 		if ( class_exists( 'WooCommerce' ) ) {
 			return true;
 		}
-		$file   = 'woocommerce/woocommerce.php';
-		$active = (array) get_option( 'active_plugins', array() );
-		if ( in_array( $file, $active, true ) ) {
-			return true;
-		}
-		return is_multisite() && array_key_exists( $file, (array) get_site_option( 'active_sitewide_plugins', array() ) );
+		return ActivePlugins::is_active( 'woocommerce/woocommerce.php' );
 	}
 
 	/**

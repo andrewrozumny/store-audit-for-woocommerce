@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace StoreAudit\Checks\Plugins;
+namespace StoreAudit\Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

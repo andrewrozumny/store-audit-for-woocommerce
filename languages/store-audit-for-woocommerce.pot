@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-12T19:18:25+00:00\n"
+"POT-Creation-Date: 2026-10-12T19:43:46+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: store-audit-for-woocommerce\n"
@@ -35,243 +35,243 @@ msgstr ""
 msgid "Andrew Rozumny"
 msgstr ""
 
-#: includes/Admin/DashboardWidget.php:43
-#: includes/Admin/Page.php:49
-#: includes/Admin/Page.php:50
-#: includes/Admin/Page.php:145
+#: includes/Admin/DashboardWidget.php:45
+#: includes/Admin/Page.php:51
+#: includes/Admin/Page.php:52
+#: includes/Admin/Page.php:148
 msgid "Store Audit"
 msgstr ""
 
-#: includes/Admin/DashboardWidget.php:100
+#: includes/Admin/DashboardWidget.php:102
 msgid "The store has not been audited yet. One click checks security, settings, performance and environment."
 msgstr ""
 
-#: includes/Admin/DashboardWidget.php:101
+#: includes/Admin/DashboardWidget.php:103
 msgid "Run your first audit"
 msgstr ""
 
-#: includes/Admin/DashboardWidget.php:111
-#: includes/Admin/Exports.php:191
-#: includes/Admin/Page.php:120
+#: includes/Admin/DashboardWidget.php:113
+#: includes/Admin/Page.php:123
+#: includes/Admin/PrintView.php:133
 msgid "out of 100"
 msgstr ""
 
 #. translators: %s: date and time of the last audit.
-#: includes/Admin/DashboardWidget.php:118
+#: includes/Admin/DashboardWidget.php:120
 #, php-format
 msgid "Last run: %s"
 msgstr ""
 
-#: includes/Admin/DashboardWidget.php:124
+#: includes/Admin/DashboardWidget.php:126
 msgid "No critical problems, warnings or failed checks. Good work."
 msgstr ""
 
-#: includes/Admin/DashboardWidget.php:132
+#: includes/Admin/DashboardWidget.php:134
 msgid "Open full report"
 msgstr ""
 
-#: includes/Admin/Exports.php:51
+#: includes/Admin/Exports.php:50
 msgid "You are not allowed to export the audit report."
 msgstr ""
 
-#: includes/Admin/Exports.php:54
+#: includes/Admin/Exports.php:53
 #: includes/Ajax.php:47
 msgid "Security check failed. Reload the page and try again."
 msgstr ""
 
-#: includes/Admin/Exports.php:67
+#: includes/Admin/Exports.php:66
 #: includes/Ajax.php:203
 msgid "There is no audit report yet. Run the audit first."
 msgstr ""
 
-#: includes/Admin/Exports.php:72
+#: includes/Admin/Exports.php:71
 msgid "Go to Store Audit"
 msgstr ""
 
-#. translators: %s: site address.
-#: includes/Admin/Exports.php:134
-#: includes/Report.php:451
-#, php-format
-msgid "Store Audit report for %s"
-msgstr ""
-
-#: includes/Admin/Exports.php:186
-msgid "Store Audit report"
-msgstr ""
-
-#: includes/Admin/Exports.php:196
-#: includes/Admin/Page.php:159
-msgid "Print / Save as PDF"
-msgstr ""
-
-#: includes/Admin/Exports.php:202
-#: includes/Report.php:465
-msgid "Section"
-msgstr ""
-
-#: includes/Admin/Exports.php:203
-#: includes/Report.php:465
-msgid "Score"
-msgstr ""
-
-#: includes/Admin/Exports.php:204
-#: includes/Admin/Page.php:103
-#: includes/Admin/Page.php:127
-#: includes/Report.php:395
-#: includes/Report.php:465
-msgid "Critical"
-msgstr ""
-
-#: includes/Admin/Exports.php:205
-#: includes/Admin/Page.php:104
-#: includes/Report.php:465
-msgid "Warnings"
-msgstr ""
-
-#: includes/Admin/Exports.php:206
-#: includes/Admin/Page.php:105
-#: includes/Admin/Page.php:129
-#: includes/Report.php:399
-#: includes/Report.php:465
-msgid "Info"
-msgstr ""
-
-#: includes/Admin/Exports.php:207
-#: includes/Admin/Page.php:106
-#: includes/Report.php:465
-msgid "Passed"
-msgstr ""
-
-#: includes/Admin/Exports.php:218
-#: includes/Admin/Page.php:123
-#: includes/Report.php:539
-msgid "incomplete"
-msgstr ""
-
-#: includes/Admin/Exports.php:248
-#: includes/Report.php:503
-msgid "What to do:"
-msgstr ""
-
-#: includes/Admin/Exports.php:261
-#: includes/Report.php:514
-msgid "Passed checks"
-msgstr ""
-
-#: includes/Admin/Page.php:99
+#: includes/Admin/Page.php:102
 msgid "Running..."
 msgstr ""
 
-#: includes/Admin/Page.php:100
+#: includes/Admin/Page.php:103
 msgid "Report copied to the clipboard."
 msgstr ""
 
-#: includes/Admin/Page.php:101
+#: includes/Admin/Page.php:104
 msgid "Copying was blocked by the browser. The report is selected below, press Ctrl+C (Cmd+C on Mac) to copy it."
 msgstr ""
 
-#: includes/Admin/Page.php:102
+#: includes/Admin/Page.php:105
 msgid "The report could not be loaded. Run the audit again."
 msgstr ""
 
+#: includes/Admin/Page.php:106
+#: includes/Admin/Page.php:130
+#: includes/Admin/PrintView.php:156
+#: includes/MarkdownFormatter.php:123
+#: includes/ReportView.php:129
+msgid "Critical"
+msgstr ""
+
 #: includes/Admin/Page.php:107
-#: includes/Admin/Page.php:131
-#: includes/Report.php:403
+#: includes/Admin/PrintView.php:157
+#: includes/MarkdownFormatter.php:123
+msgid "Warnings"
+msgstr ""
+
+#: includes/Admin/Page.php:108
+#: includes/Admin/Page.php:132
+#: includes/Admin/PrintView.php:158
+#: includes/MarkdownFormatter.php:123
+#: includes/ReportView.php:133
+msgid "Info"
+msgstr ""
+
+#: includes/Admin/Page.php:109
+#: includes/Admin/PrintView.php:159
+#: includes/MarkdownFormatter.php:123
+msgid "Passed"
+msgstr ""
+
+#: includes/Admin/Page.php:110
+#: includes/Admin/Page.php:134
+#: includes/ReportView.php:137
 msgid "Not checked"
 msgstr ""
 
 #. translators: %d: number of passed checks in a section.
-#: includes/Admin/Page.php:109
+#: includes/Admin/Page.php:112
 #, php-format
 msgid "Passed checks (%d)"
 msgstr ""
 
-#: includes/Admin/Page.php:110
-#: includes/Admin/Page.php:150
+#: includes/Admin/Page.php:113
+#: includes/Admin/Page.php:153
 msgid "Run audit"
 msgstr ""
 
-#: includes/Admin/Page.php:111
+#: includes/Admin/Page.php:114
 msgid "Run again"
 msgstr ""
 
-#: includes/Admin/Page.php:112
+#: includes/Admin/Page.php:115
 msgid "Last run:"
 msgstr ""
 
 #. translators: 1: check title, 2: current number, 3: total number.
-#: includes/Admin/Page.php:114
+#: includes/Admin/Page.php:117
 #, php-format
 msgid "Checking: %1$s (%2$s of %3$s)"
 msgstr ""
 
-#: includes/Admin/Page.php:115
+#: includes/Admin/Page.php:118
 msgid "Building the report..."
 msgstr ""
 
-#: includes/Admin/Page.php:116
+#: includes/Admin/Page.php:119
 msgid "Could not check"
 msgstr ""
 
-#: includes/Admin/Page.php:117
+#: includes/Admin/Page.php:120
 msgid "The audit could not be started. Reload the page and try again."
 msgstr ""
 
-#: includes/Admin/Page.php:118
+#: includes/Admin/Page.php:121
 msgid "The report could not be built. Please run the audit again."
 msgstr ""
 
-#: includes/Admin/Page.php:119
+#: includes/Admin/Page.php:122
 msgid "Store health score"
 msgstr ""
 
 #. translators: 1: number of checks that ran, 2: number of checks in the report.
-#: includes/Admin/Page.php:122
-#: includes/Score.php:137
+#: includes/Admin/Page.php:125
+#: includes/Score.php:181
 #, php-format
 msgid "Incomplete: %1$d of %2$d checks ran"
 msgstr ""
 
-#: includes/Admin/Page.php:124
+#: includes/Admin/Page.php:126
+#: includes/Admin/PrintView.php:185
+#: includes/ReportView.php:149
+msgid "incomplete"
+msgstr ""
+
+#: includes/Admin/Page.php:127
 msgid "What is this and why it matters"
 msgstr ""
 
-#: includes/Admin/Page.php:125
+#: includes/Admin/Page.php:128
 msgid "What to do"
 msgstr ""
 
-#: includes/Admin/Page.php:126
+#: includes/Admin/Page.php:129
 msgid "No checks are registered yet."
 msgstr ""
 
-#: includes/Admin/Page.php:128
-#: includes/Report.php:397
+#: includes/Admin/Page.php:131
+#: includes/ReportView.php:131
 msgid "Warning"
 msgstr ""
 
-#: includes/Admin/Page.php:130
-#: includes/Report.php:401
+#: includes/Admin/Page.php:133
+#: includes/ReportView.php:135
 msgid "OK"
 msgstr ""
 
-#: includes/Admin/Page.php:140
+#: includes/Admin/Page.php:143
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: includes/Admin/Page.php:147
+#: includes/Admin/Page.php:150
 msgid "Checks your store for security, settings, performance and environment problems. It only reads data and never changes anything on your site."
 msgstr ""
 
-#: includes/Admin/Page.php:158
+#: includes/Admin/Page.php:161
 msgid "Download JSON"
 msgstr ""
 
-#: includes/Admin/Page.php:160
+#: includes/Admin/Page.php:162
+#: includes/Admin/PrintView.php:138
+msgid "Print / Save as PDF"
+msgstr ""
+
+#: includes/Admin/Page.php:163
 msgid "Copy report as Markdown"
 msgstr ""
 
-#: includes/Admin/Page.php:164
+#: includes/Admin/Page.php:167
 msgid "Report as Markdown"
+msgstr ""
+
+#. translators: %s: site address.
+#: includes/Admin/PrintView.php:45
+#: includes/MarkdownFormatter.php:77
+#, php-format
+msgid "Store Audit report for %s"
+msgstr ""
+
+#: includes/Admin/PrintView.php:128
+msgid "Store Audit report"
+msgstr ""
+
+#: includes/Admin/PrintView.php:154
+#: includes/MarkdownFormatter.php:123
+msgid "Section"
+msgstr ""
+
+#: includes/Admin/PrintView.php:155
+#: includes/MarkdownFormatter.php:123
+msgid "Score"
+msgstr ""
+
+#: includes/Admin/PrintView.php:212
+#: includes/MarkdownFormatter.php:156
+msgid "Passed checks"
+msgstr ""
+
+#: includes/Admin/PrintView.php:238
+#: includes/MarkdownFormatter.php:181
+msgid "What to do:"
 msgstr ""
 
 #: includes/Ajax.php:50
@@ -313,9 +313,9 @@ msgstr[1] ""
 
 #. translators: %d: number of items not shown.
 #: includes/Checks/Environment/Cron.php:163
-#: includes/Checks/Plugins/DetailList.php:37
-#: includes/Checks/Plugins/PluginsThemeChild.php:157
-#: includes/Checks/WooCommerce/NegativeStock.php:113
+#: includes/Checks/Plugins/PluginsThemeChild.php:140
+#: includes/Checks/WooCommerce/NegativeStock.php:112
+#: includes/Support/DetailList.php:37
 #, php-format
 msgid "and %d more"
 msgstr ""
@@ -509,39 +509,39 @@ msgstr ""
 msgid "%s of memory is available to PHP."
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:62
+#: includes/Checks/Environment/ObjectCache.php:61
 msgid "Persistent object cache"
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:69
+#: includes/Checks/Environment/ObjectCache.php:68
 msgid "An object cache (Redis or Memcached) keeps database answers in memory so big stores load much faster. Without it every page asks the database the same questions again."
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:76
+#: includes/Checks/Environment/ObjectCache.php:75
 msgid "Ask your host to enable Redis or Memcached and install the matching object cache plugin."
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:119
+#: includes/Checks/Environment/ObjectCache.php:109
 msgid "A persistent object cache is in use."
 msgstr ""
 
 #. translators: %d: number of products.
-#: includes/Checks/Environment/ObjectCache.php:125
+#: includes/Checks/Environment/ObjectCache.php:115
 #, php-format
 msgid "Published products: %d"
 msgstr ""
 
 #. translators: %d: number of orders.
-#: includes/Checks/Environment/ObjectCache.php:127
+#: includes/Checks/Environment/ObjectCache.php:117
 #, php-format
 msgid "Orders: %d"
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:131
+#: includes/Checks/Environment/ObjectCache.php:121
 msgid "There is no persistent object cache, and the store is large enough to benefit from one."
 msgstr ""
 
-#: includes/Checks/Environment/ObjectCache.php:133
+#: includes/Checks/Environment/ObjectCache.php:123
 msgid "There is no persistent object cache. It is not needed yet at this store size."
 msgstr ""
 
@@ -564,77 +564,77 @@ msgid "Could not read the PHP version \"%s\"."
 msgstr ""
 
 #. translators: %s: PHP branch, e.g. 7.4.
-#: includes/Checks/Environment/PhpVersion.php:114
+#: includes/Checks/Environment/PhpVersion.php:115
 #, php-format
 msgid "PHP %s reached end of life years ago and no longer gets security fixes."
 msgstr ""
 
 #. translators: %s: PHP version.
-#: includes/Checks/Environment/PhpVersion.php:122
+#: includes/Checks/Environment/PhpVersion.php:123
 #, php-format
 msgid "PHP %s is a current version."
 msgstr ""
 
 #. translators: 1: PHP branch, 2: date.
-#: includes/Checks/Environment/PhpVersion.php:133
+#: includes/Checks/Environment/PhpVersion.php:134
 #, php-format
 msgid "PHP %1$s reached end of life on %2$s"
 msgstr ""
 
 #. translators: 1: PHP branch, 2: date.
-#: includes/Checks/Environment/PhpVersion.php:141
+#: includes/Checks/Environment/PhpVersion.php:142
 #, php-format
 msgid "PHP %1$s stops getting security fixes on %2$s"
 msgstr ""
 
 #. translators: 1: PHP branch, 2: date.
-#: includes/Checks/Environment/PhpVersion.php:147
+#: includes/Checks/Environment/PhpVersion.php:148
 #, php-format
 msgid "PHP %1$s is supported until %2$s"
 msgstr ""
 
-#: includes/Checks/Environment/WcVersion.php:60
+#: includes/Checks/Environment/WcVersion.php:61
 msgid "WooCommerce version"
 msgstr ""
 
-#: includes/Checks/Environment/WcVersion.php:67
+#: includes/Checks/Environment/WcVersion.php:68
 msgid "WooCommerce handles your cart, checkout and orders. Old versions miss security and payment fixes and can break at checkout when WordPress or PHP is updated."
 msgstr ""
 
-#: includes/Checks/Environment/WcVersion.php:74
+#: includes/Checks/Environment/WcVersion.php:75
 msgid "Back up the site, test on a staging copy if you can, then update WooCommerce from Dashboard > Updates."
 msgstr ""
 
-#: includes/Checks/Environment/WcVersion.php:119
+#: includes/Checks/Environment/WcVersion.php:120
 msgid "WooCommerce is not active, so there is nothing to check."
 msgstr ""
 
 #. translators: %s: WooCommerce version.
-#: includes/Checks/Environment/WcVersion.php:127
+#: includes/Checks/Environment/WcVersion.php:129
 #, php-format
 msgid "WooCommerce %s is very old and no longer receives security fixes."
 msgstr ""
 
 #. translators: %s: WooCommerce version.
-#: includes/Checks/Environment/WcVersion.php:134
+#: includes/Checks/Environment/WcVersion.php:136
 #, php-format
 msgid "WooCommerce %s is installed. Could not compare, update data not available yet."
 msgstr ""
 
 #. translators: %s: WooCommerce version.
-#: includes/Checks/Environment/WcVersion.php:141
+#: includes/Checks/Environment/WcVersion.php:143
 #, php-format
 msgid "WooCommerce %s is up to date."
 msgstr ""
 
 #. translators: 1: installed WooCommerce version, 2: latest version.
-#: includes/Checks/Environment/WcVersion.php:153
+#: includes/Checks/Environment/WcVersion.php:150
 #, php-format
 msgid "WooCommerce %1$s is installed, version %2$s is available."
 msgstr ""
 
 #. translators: 1: installed WooCommerce version, 2: latest version.
-#: includes/Checks/Environment/WcVersion.php:159
+#: includes/Checks/Environment/WcVersion.php:156
 #, php-format
 msgid "WooCommerce %1$s is installed, a small update (%2$s) is available."
 msgstr ""
@@ -669,56 +669,56 @@ msgstr ""
 msgid "Debug mode is enabled on a live site. Errors are hidden from visitors but still logged."
 msgstr ""
 
-#: includes/Checks/Environment/WpVersion.php:60
+#: includes/Checks/Environment/WpVersion.php:61
 msgid "WordPress version"
 msgstr ""
 
-#: includes/Checks/Environment/WpVersion.php:67
+#: includes/Checks/Environment/WpVersion.php:68
 msgid "Each WordPress update fixes bugs and security holes. A store running an old core is easier to hack and may stop working with newer plugins."
 msgstr ""
 
-#: includes/Checks/Environment/WpVersion.php:74
+#: includes/Checks/Environment/WpVersion.php:75
 msgid "Back up the site, then update WordPress from Dashboard > Updates."
 msgstr ""
 
 #. translators: %s: WordPress version.
-#: includes/Checks/Environment/WpVersion.php:119
+#: includes/Checks/Environment/WpVersion.php:120
 #, php-format
 msgid "WordPress %s is installed. Could not compare, update data not available yet."
 msgstr ""
 
 #. translators: %s: WordPress version.
-#: includes/Checks/Environment/WpVersion.php:126
+#: includes/Checks/Environment/WpVersion.php:127
 #, php-format
 msgid "WordPress %s is up to date."
 msgstr ""
 
 #. translators: 1: installed WordPress version, 2: latest version.
-#: includes/Checks/Environment/WpVersion.php:138
+#: includes/Checks/Environment/WpVersion.php:134
 #, php-format
 msgid "WordPress %1$s is installed, a newer major release (%2$s) is available."
 msgstr ""
 
 #. translators: 1: installed WordPress version, 2: latest version.
-#: includes/Checks/Environment/WpVersion.php:144
+#: includes/Checks/Environment/WpVersion.php:140
 #, php-format
 msgid "WordPress %1$s is installed, a minor update (%2$s) is available. Minor updates usually contain security fixes."
 msgstr ""
 
-#: includes/Checks/Performance/ActivePlugins.php:60
+#: includes/Checks/Performance/ActivePlugins.php:61
 msgid "Number of active plugins"
 msgstr ""
 
-#: includes/Checks/Performance/ActivePlugins.php:67
+#: includes/Checks/Performance/ActivePlugins.php:68
 msgid "Every active plugin adds code that runs on each page. A very long list usually means a slower, more fragile store and more security surface."
 msgstr ""
 
-#: includes/Checks/Performance/ActivePlugins.php:74
+#: includes/Checks/Performance/ActivePlugins.php:75
 msgid "Deactivate and delete plugins you do not need, and replace several small plugins with one that does the job well."
 msgstr ""
 
 #. translators: %d: number of plugins.
-#: includes/Checks/Performance/ActivePlugins.php:109
+#: includes/Checks/Performance/ActivePlugins.php:108
 #, php-format
 msgid "%d plugin is active."
 msgid_plural "%d plugins are active."
@@ -726,16 +726,16 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: plugins active on this site, 2: network-active plugins.
-#: includes/Checks/Performance/ActivePlugins.php:115
+#: includes/Checks/Performance/ActivePlugins.php:114
 #, php-format
 msgid "%1$d on this site and %2$d network-wide."
 msgstr ""
 
-#: includes/Checks/Performance/ActivePlugins.php:119
+#: includes/Checks/Performance/ActivePlugins.php:118
 msgid "That is a lot and will slow the store down."
 msgstr ""
 
-#: includes/Checks/Performance/ActivePlugins.php:122
+#: includes/Checks/Performance/ActivePlugins.php:121
 msgid "Consider removing the ones you do not need."
 msgstr ""
 
@@ -896,7 +896,7 @@ msgid "There are no images in the media library to check."
 msgstr ""
 
 #. translators: %d: number of images sampled.
-#: includes/Checks/Performance/Images.php:194
+#: includes/Checks/Performance/Images.php:182
 #, php-format
 msgid "Of the latest %d image"
 msgid_plural "Of the latest %d images"
@@ -904,74 +904,74 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of images without saved dimensions.
-#: includes/Checks/Performance/Images.php:199
+#: includes/Checks/Performance/Images.php:187
 #, php-format
 msgid "%d has no saved dimensions"
 msgid_plural "%d have no saved dimensions"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Performance/Images.php:204
+#: includes/Checks/Performance/Images.php:192
 msgid "Images without dimensions cause the page to jump while loading (layout shift)."
 msgstr ""
 
 #. translators: 1: sample size, for example "Of the latest 23 images", 2: images without saved dimensions, 3: name of the image optimizer plugin.
-#: includes/Checks/Performance/Images.php:211
+#: includes/Checks/Performance/Images.php:199
 #, php-format
 msgid "%1$s, %2$s. Images are served as WebP by %3$s, not checked."
 msgstr ""
 
 #. translators: 1: sample size, for example "Of the latest 23 images", 2: images without size information, 3: images without WebP or AVIF.
-#: includes/Checks/Performance/Images.php:221
+#: includes/Checks/Performance/Images.php:209
 #, php-format
 msgid "%1$s, %2$s and %3$s."
 msgstr ""
 
 #. translators: %d: number of images without a WebP or AVIF version.
-#: includes/Checks/Performance/Images.php:226
+#: includes/Checks/Performance/Images.php:214
 #, php-format
 msgid "%d has no WebP or AVIF version"
 msgid_plural "%d have no WebP or AVIF version"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Performance/Images.php:231
+#: includes/Checks/Performance/Images.php:219
 msgid "Pages load slower on mobile when images are not WebP or AVIF."
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:62
+#: includes/Checks/Performance/OrdersStorage.php:61
 msgid "Order storage"
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:69
+#: includes/Checks/Performance/OrdersStorage.php:68
 msgid "Older WooCommerce stores keep orders mixed with posts, which gets slow as orders pile up. The dedicated orders tables (HPOS) are faster for big stores."
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:76
+#: includes/Checks/Performance/OrdersStorage.php:75
 msgid "Switch to High-Performance Order Storage in WooCommerce > Settings > Advanced > Features (back up first and check your plugins support it)."
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:120
+#: includes/Checks/Performance/OrdersStorage.php:110
 msgid "WooCommerce is not active, so there are no orders to count."
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:124
+#: includes/Checks/Performance/OrdersStorage.php:114
 msgid "dedicated orders tables (HPOS)"
 msgstr ""
 
-#: includes/Checks/Performance/OrdersStorage.php:124
+#: includes/Checks/Performance/OrdersStorage.php:114
 msgid "the posts tables (legacy)"
 msgstr ""
 
 #. translators: 1: number of orders, 2: storage type.
-#: includes/Checks/Performance/OrdersStorage.php:127
+#: includes/Checks/Performance/OrdersStorage.php:117
 #, php-format
 msgid "%1$d order, stored in %2$s."
 msgid_plural "%1$d orders, stored in %2$s."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Performance/OrdersStorage.php:133
+#: includes/Checks/Performance/OrdersStorage.php:123
 msgid "With this many orders the legacy storage slows down the admin and reports."
 msgstr ""
 
@@ -1037,71 +1037,55 @@ msgstr ""
 msgid "The %s table is very large, which slows the store down."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginInventory.php:47
-#: includes/Checks/Plugins/PluginsMu.php:186
+#: includes/Checks/Plugins/PluginInventory.php:48
+#: includes/Checks/Plugins/PluginsMu.php:198
 msgid "the WordPress plugin functions are not loaded."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsAbandoned.php:102
+#: includes/Checks/Plugins/PluginsAbandoned.php:103
 msgid "Abandoned plugins"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsAbandoned.php:109
+#: includes/Checks/Plugins/PluginsAbandoned.php:110
 msgid "A plugin that has not been updated for over a year probably has no developer looking after it, so new security flaws stay unfixed. Plugins closed on wordpress.org for a security problem are dangerous to keep."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsAbandoned.php:116
+#: includes/Checks/Plugins/PluginsAbandoned.php:117
 msgid "Replace abandoned plugins with maintained alternatives, and remove closed ones right away."
 msgstr ""
 
 #. translators: 1: plugin name, 2: host name that serves the updates.
-#: includes/Checks/Plugins/PluginsAbandoned.php:144
+#: includes/Checks/Plugins/PluginsAbandoned.php:155
 #, php-format
 msgid "%1$s: not checked, updates come from %2$s"
 msgstr ""
 
-#. translators: 1: plugin name, 2: reason text.
-#: includes/Checks/Plugins/PluginsAbandoned.php:166
-#, php-format
-msgid "%1$s: closed on wordpress.org (%2$s)"
-msgstr ""
-
-#. translators: %s: plugin name.
-#: includes/Checks/Plugins/PluginsAbandoned.php:172
-#, php-format
-msgid "%s: closed on wordpress.org"
-msgstr ""
-
 #. translators: 1: plugin name, 2: date of last update.
-#: includes/Checks/Plugins/PluginsAbandoned.php:185
+#: includes/Checks/Plugins/PluginsAbandoned.php:206
 #, php-format
 msgid "%1$s: last updated %2$s"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/Checks/Plugins/PluginsAbandoned.php:194
+#: includes/Checks/Plugins/PluginsAbandoned.php:215
 #, php-format
 msgid "%s: not checked, it is not hosted on wordpress.org"
 msgstr ""
 
-#. translators: %d: number of plugins.
-#: includes/Checks/Plugins/PluginsAbandoned.php:207
+#. translators: %s: plugin name.
+#: includes/Checks/Plugins/PluginsAbandoned.php:235
 #, php-format
-msgid "%d plugin not checked (time limit)"
-msgid_plural "%d plugins not checked (time limit)"
-msgstr[0] ""
-msgstr[1] ""
+msgid "%s: closed on wordpress.org"
+msgstr ""
+
+#. translators: 1: plugin name, 2: reason text.
+#: includes/Checks/Plugins/PluginsAbandoned.php:241
+#, php-format
+msgid "%1$s: closed on wordpress.org (%2$s)"
+msgstr ""
 
 #. translators: %d: number of plugins.
-#: includes/Checks/Plugins/PluginsAbandoned.php:214
-#, php-format
-msgid "%d plugin not checked (wordpress.org did not answer)"
-msgid_plural "%d plugins not checked (wordpress.org did not answer)"
-msgstr[0] ""
-msgstr[1] ""
-
-#. translators: %d: number of plugins.
-#: includes/Checks/Plugins/PluginsAbandoned.php:223
+#: includes/Checks/Plugins/PluginsAbandoned.php:262
 #, php-format
 msgid "%d plugin was closed on wordpress.org because of a security problem."
 msgid_plural "%d plugins were closed on wordpress.org because of a security problem."
@@ -1109,7 +1093,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of plugins.
-#: includes/Checks/Plugins/PluginsAbandoned.php:234
+#: includes/Checks/Plugins/PluginsAbandoned.php:273
 #, php-format
 msgid "%d plugin was closed on wordpress.org."
 msgid_plural "%d plugins were closed on wordpress.org."
@@ -1117,127 +1101,131 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of plugins.
-#: includes/Checks/Plugins/PluginsAbandoned.php:245
+#: includes/Checks/Plugins/PluginsAbandoned.php:284
 #, php-format
 msgid "%d plugin has not been updated for over a year."
 msgid_plural "%d plugins have not been updated for over a year."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Plugins/PluginsAbandoned.php:254
+#: includes/Checks/Plugins/PluginsAbandoned.php:293
 msgid "No abandoned plugins found, but some plugins could not be checked."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsAbandoned.php:259
+#: includes/Checks/Plugins/PluginsAbandoned.php:298
 msgid "All plugins were updated within the last year."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsDuplicates.php:81
+#. translators: %d: number of plugins.
+#: includes/Checks/Plugins/PluginsAbandoned.php:312
+#, php-format
+msgid "%d plugin not checked (time limit)"
+msgid_plural "%d plugins not checked (time limit)"
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of plugins.
+#: includes/Checks/Plugins/PluginsAbandoned.php:319
+#, php-format
+msgid "%d plugin not checked (wordpress.org did not answer)"
+msgid_plural "%d plugins not checked (wordpress.org did not answer)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/Checks/Plugins/PluginsDuplicates.php:82
 msgid "Plugins that do the same job"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsDuplicates.php:88
+#: includes/Checks/Plugins/PluginsDuplicates.php:89
 msgid "Running two plugins for the same job (two SEO plugins, two caching plugins and so on) can break pages, produce duplicate output and slow the store down."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsDuplicates.php:95
+#: includes/Checks/Plugins/PluginsDuplicates.php:96
 msgid "Keep one plugin per job and deactivate the others (check settings first, then switch over)."
 msgstr ""
 
 #. translators: 1: category such as SEO, 2: plugin names.
-#: includes/Checks/Plugins/PluginsDuplicates.php:153
+#: includes/Checks/Plugins/PluginsDuplicates.php:157
 #, php-format
 msgid "%1$s: %2$s"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsDuplicates.php:161
+#: includes/Checks/Plugins/PluginsDuplicates.php:165
 msgid "No overlapping plugins found."
 msgstr ""
 
 #. translators: %d: number of categories.
-#: includes/Checks/Plugins/PluginsDuplicates.php:167
+#: includes/Checks/Plugins/PluginsDuplicates.php:171
 #, php-format
 msgid "Several active plugins overlap in %d category."
 msgid_plural "Several active plugins overlap in %d categories."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:80
+#: includes/Checks/Plugins/PluginsInactive.php:81
 msgid "Inactive plugins"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:87
+#: includes/Checks/Plugins/PluginsInactive.php:88
 msgid "Plugins that are installed but switched off are not used, yet their files stay on the server. Attackers can target known flaws in them, and nobody notices when they fall out of date."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:94
+#: includes/Checks/Plugins/PluginsInactive.php:95
 msgid "Delete the plugins you do not use (Plugins, Installed Plugins, Delete). Keep a backup first."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:118
+#: includes/Checks/Plugins/PluginsInactive.php:119
 msgid "Every installed plugin is active."
 msgstr ""
 
 #. translators: %d: number of inactive plugins.
-#: includes/Checks/Plugins/PluginsInactive.php:123
+#: includes/Checks/Plugins/PluginsInactive.php:124
 #, php-format
 msgid "%d plugin is installed but inactive."
 msgid_plural "%d plugins are installed but inactive."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:128
+#: includes/Checks/Plugins/PluginsInactive.php:129
 msgid "On a large network this check only looks at this site."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:130
+#: includes/Checks/Plugins/PluginsInactive.php:131
 msgid "Ask the network admin which of these plugins other sites use before removing anything."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsInactive.php:136
+#: includes/Checks/Plugins/PluginsInactive.php:137
 msgid "Ask the network admin before deleting: another site of the network may still use a plugin."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsMu.php:76
+#: includes/Checks/Plugins/PluginsMu.php:77
 msgid "Must-use plugins"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsMu.php:83
+#: includes/Checks/Plugins/PluginsMu.php:84
 msgid "Must-use plugins are loaded automatically and cannot be switched off from the Plugins screen. Hosts and developers use them, but old forgotten ones keep running unnoticed and may no longer be maintained."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsMu.php:90
+#: includes/Checks/Plugins/PluginsMu.php:91
 msgid "Ask your developer or host what each old must-use plugin does, and remove the ones that are not needed."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsMu.php:99
+#: includes/Checks/Plugins/PluginsMu.php:100
 msgid "No must-use plugins are installed."
 msgstr ""
 
 #. translators: 1: plugin name, 2: file name.
-#: includes/Checks/Plugins/PluginsMu.php:113
+#: includes/Checks/Plugins/PluginsMu.php:114
 #, php-format
 msgid "%1$s (%2$s): installed by your host"
 msgstr ""
 
-#. translators: 1: plugin name, 2: file name, 3: date.
-#: includes/Checks/Plugins/PluginsMu.php:124
-#, php-format
-msgid "%1$s (%2$s): file last changed %3$s, old must-use plugin, check if still needed"
-msgstr ""
-
-#. translators: 1: plugin name, 2: file name.
-#: includes/Checks/Plugins/PluginsMu.php:132
-#, php-format
-msgid "%1$s (%2$s)"
-msgstr ""
-
-#: includes/Checks/Plugins/PluginsMu.php:140
+#: includes/Checks/Plugins/PluginsMu.php:127
 msgid "The only must-use plugins are the ones your host installs, which is normal."
 msgstr ""
 
 #. translators: 1: number of old must-use plugins, 2: total number.
-#: includes/Checks/Plugins/PluginsMu.php:147
+#: includes/Checks/Plugins/PluginsMu.php:134
 #, php-format
 msgid "%1$d of %2$d must-use plugins has not been touched for over 2 years."
 msgid_plural "%1$d of %2$d must-use plugins have not been touched for over 2 years."
@@ -1245,37 +1233,39 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of must-use plugins.
-#: includes/Checks/Plugins/PluginsMu.php:158
+#: includes/Checks/Plugins/PluginsMu.php:145
 #, php-format
 msgid "%d must-use plugin is installed."
 msgid_plural "%d must-use plugins are installed."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Plugins/PluginsThemeChild.php:105
+#. translators: 1: plugin name, 2: file name, 3: date.
+#: includes/Checks/Plugins/PluginsMu.php:163
+#, php-format
+msgid "%1$s (%2$s): file last changed %3$s, old must-use plugin, check if still needed"
+msgstr ""
+
+#. translators: 1: plugin name, 2: file name.
+#: includes/Checks/Plugins/PluginsMu.php:171
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#: includes/Checks/Plugins/PluginsThemeChild.php:106
 msgid "Child theme and theme edits"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsThemeChild.php:112
+#: includes/Checks/Plugins/PluginsThemeChild.php:113
 msgid "When a theme is updated, any edits made directly inside it are overwritten. A child theme keeps your changes in a separate place. This is a best guess: files that are newer than the theme itself look edited, but a plugin or an update can also cause that."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsThemeChild.php:119
+#: includes/Checks/Plugins/PluginsThemeChild.php:120
 msgid "Ask your developer to move custom code into a child theme before the next theme update."
 msgstr ""
 
-#. translators: %s: version number.
-#: includes/Checks/Plugins/PluginsThemeChild.php:135
-#, php-format
-msgid "wordpress.org theme, version %s"
-msgstr ""
-
-#: includes/Checks/Plugins/PluginsThemeChild.php:138
-msgid "not listed on wordpress.org"
-msgstr ""
-
 #. translators: 1: theme name, 2: number of files, 3: where the theme comes from.
-#: includes/Checks/Plugins/PluginsThemeChild.php:164
+#: includes/Checks/Plugins/PluginsThemeChild.php:147
 #, php-format
 msgid "The files of the parent theme \"%1$s\" look edited (%2$d file is newer than the theme; %3$s)."
 msgid_plural "The files of the parent theme \"%1$s\" look edited (%2$d files are newer than the theme; %3$s)."
@@ -1283,47 +1273,57 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: theme name, 2: where the theme comes from.
-#: includes/Checks/Plugins/PluginsThemeChild.php:177
+#: includes/Checks/Plugins/PluginsThemeChild.php:160
 #, php-format
 msgid "The active theme \"%1$s\" is used without a child theme (%2$s). Updates of the theme will overwrite any edits; a child theme keeps them."
 msgstr ""
 
 #. translators: 1: theme name, 2: where the theme comes from.
-#: includes/Checks/Plugins/PluginsThemeChild.php:187
+#: includes/Checks/Plugins/PluginsThemeChild.php:170
 #, php-format
 msgid "A child theme is active and the parent theme \"%1$s\" looks unedited (%2$s)."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsUpdates.php:60
+#: includes/Checks/Plugins/PluginsThemeChild.php:184
+msgid "not listed on wordpress.org"
+msgstr ""
+
+#. translators: %s: version number.
+#: includes/Checks/Plugins/PluginsThemeChild.php:188
+#, php-format
+msgid "wordpress.org theme, version %s"
+msgstr ""
+
+#: includes/Checks/Plugins/PluginsUpdates.php:61
 msgid "Plugin and theme updates"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsUpdates.php:67
+#: includes/Checks/Plugins/PluginsUpdates.php:68
 msgid "Updates often contain security fixes. A store running old versions can be hacked through flaws that are already public, which means lost orders and customer data."
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsUpdates.php:74
+#: includes/Checks/Plugins/PluginsUpdates.php:75
 msgid "Back up the site, then update on the Dashboard, Updates screen (test big updates on a staging copy first)."
 msgstr ""
 
 #. translators: 1: plugin name, 2: installed version, 3: new version.
-#: includes/Checks/Plugins/PluginsUpdates.php:90
+#: includes/Checks/Plugins/PluginsUpdates.php:91
 #, php-format
 msgid "%1$s: %2$s -> %3$s"
 msgstr ""
 
 #. translators: 1: theme name, 2: installed version, 3: new version.
-#: includes/Checks/Plugins/PluginsUpdates.php:100
+#: includes/Checks/Plugins/PluginsUpdates.php:101
 #, php-format
 msgid "Theme %1$s: %2$s -> %3$s"
 msgstr ""
 
-#: includes/Checks/Plugins/PluginsUpdates.php:108
+#: includes/Checks/Plugins/PluginsUpdates.php:109
 msgid "All plugins and themes are up to date."
 msgstr ""
 
 #. translators: %d: number of plugin updates.
-#: includes/Checks/Plugins/PluginsUpdates.php:116
+#: includes/Checks/Plugins/PluginsUpdates.php:125
 #, php-format
 msgid "%d plugin update is waiting."
 msgid_plural "%d plugin updates are waiting."
@@ -1331,7 +1331,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of theme updates.
-#: includes/Checks/Plugins/PluginsUpdates.php:122
+#: includes/Checks/Plugins/PluginsUpdates.php:132
 #, php-format
 msgid "%d theme update is waiting."
 msgid_plural "%d theme updates are waiting."
@@ -1339,13 +1339,13 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: plugin updates, for example "2 plugin updates", 2: theme updates, for example "1 theme update".
-#: includes/Checks/Plugins/PluginsUpdates.php:128
+#: includes/Checks/Plugins/PluginsUpdates.php:138
 #, php-format
 msgid "%1$s and %2$s are waiting."
 msgstr ""
 
 #. translators: %d: number of plugin updates.
-#: includes/Checks/Plugins/PluginsUpdates.php:131
+#: includes/Checks/Plugins/PluginsUpdates.php:141
 #, php-format
 msgid "%d plugin update"
 msgid_plural "%d plugin updates"
@@ -1353,7 +1353,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of theme updates.
-#: includes/Checks/Plugins/PluginsUpdates.php:136
+#: includes/Checks/Plugins/PluginsUpdates.php:146
 #, php-format
 msgid "%d theme update"
 msgid_plural "%d theme updates"
@@ -1436,64 +1436,64 @@ msgstr ""
 msgid "Create a new administrator with a unique login, move your content to it, and delete the old \"admin\" user. Show a nickname publicly instead of the login."
 msgstr ""
 
-#. translators: %s: login name.
-#: includes/Checks/Security/AdminUsername.php:115
-#, php-format
-msgid "Administrator with the login \"%s\""
-msgstr ""
-
-#. translators: %s: login name.
-#: includes/Checks/Security/AdminUsername.php:119
-#, php-format
-msgid "User with the login \"%s\" (not an administrator)"
-msgstr ""
-
-#. translators: %s: login name.
-#: includes/Checks/Security/AdminUsername.php:123
-#, php-format
-msgid "Login \"%s\" is also shown publicly as the author name"
-msgstr ""
-
-#. translators: %s: login name.
-#: includes/Checks/Security/AdminUsername.php:127
-#, php-format
-msgid "The author archive address of \"%s\" shows the login. To hide it, change the user slug with a plugin that edits user slugs, or turn off author archives."
-msgstr ""
-
-#: includes/Checks/Security/AdminUsername.php:132
+#: includes/Checks/Security/AdminUsername.php:91
 msgid "An administrator account uses the login \"admin\" or \"administrator\", the first one attackers try."
 msgstr ""
 
-#: includes/Checks/Security/AdminUsername.php:135
+#: includes/Checks/Security/AdminUsername.php:94
 msgid "A user account uses the login \"admin\" or \"administrator\", the first one attackers try."
 msgstr ""
 
 #. translators: %d: number of administrators.
-#: includes/Checks/Security/AdminUsername.php:140
+#: includes/Checks/Security/AdminUsername.php:99
 #, php-format
 msgid "%d administrator login is shown publicly as the author name."
 msgid_plural "%d administrator logins are shown publicly as the author name."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Security/AdminUsername.php:142
+#: includes/Checks/Security/AdminUsername.php:101
 msgid "In Users > Profile, set a nickname and choose it under \"Display name publicly as\", so the login stays private."
 msgstr ""
 
 #. translators: %d: number of administrators.
-#: includes/Checks/Security/AdminUsername.php:148
+#: includes/Checks/Security/AdminUsername.php:107
 #, php-format
 msgid "The author archive address of %d administrator shows the login."
 msgid_plural "The author archive addresses of %d administrators show the login."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Security/AdminUsername.php:150
+#: includes/Checks/Security/AdminUsername.php:109
 msgid "Change the user slug with a plugin that edits user slugs, or turn off author archives."
 msgstr ""
 
-#: includes/Checks/Security/AdminUsername.php:153
+#: includes/Checks/Security/AdminUsername.php:112
 msgid "No guessable administrator logins found."
+msgstr ""
+
+#. translators: %s: login name.
+#: includes/Checks/Security/AdminUsername.php:181
+#, php-format
+msgid "Administrator with the login \"%s\""
+msgstr ""
+
+#. translators: %s: login name.
+#: includes/Checks/Security/AdminUsername.php:185
+#, php-format
+msgid "User with the login \"%s\" (not an administrator)"
+msgstr ""
+
+#. translators: %s: login name.
+#: includes/Checks/Security/AdminUsername.php:189
+#, php-format
+msgid "Login \"%s\" is also shown publicly as the author name"
+msgstr ""
+
+#. translators: %s: login name.
+#: includes/Checks/Security/AdminUsername.php:193
+#, php-format
+msgid "The author archive address of \"%s\" shows the login. To hide it, change the user slug with a plugin that edits user slugs, or turn off author archives."
 msgstr ""
 
 #: includes/Checks/Security/Antifraud.php:91
@@ -1552,35 +1552,35 @@ msgstr ""
 msgid "Move backups out of the web folder (or into a protected storage) and delete old copies."
 msgstr ""
 
-#: includes/Checks/Security/BackupsInWebroot.php:184
+#: includes/Checks/Security/BackupsInWebroot.php:164
 msgid "Partially scanned: the folders are large, so only the first part was looked at."
 msgstr ""
 
-#: includes/Checks/Security/BackupsInWebroot.php:190
-msgid "Some folders could not be read, so backup files in them could not be looked for."
-msgstr ""
-
-#. translators: %s: folder name.
-#: includes/Checks/Security/BackupsInWebroot.php:195
-#, php-format
-msgid "Could not read: %s"
-msgstr ""
-
-#: includes/Checks/Security/BackupsInWebroot.php:205
-msgid "No backup or database dump files found in the part that was scanned."
-msgstr ""
-
-#: includes/Checks/Security/BackupsInWebroot.php:207
-msgid "No backup or database dump files found in the site root, wp-content or uploads."
-msgstr ""
-
 #. translators: %d: number of files.
-#: includes/Checks/Security/BackupsInWebroot.php:212
+#: includes/Checks/Security/BackupsInWebroot.php:173
 #, php-format
 msgid "%d backup or dump file sits in a public folder."
 msgid_plural "%d backup or dump files sit in public folders."
 msgstr[0] ""
 msgstr[1] ""
+
+#: includes/Checks/Security/BackupsInWebroot.php:216
+msgid "Some folders could not be read, so backup files in them could not be looked for."
+msgstr ""
+
+#. translators: %s: folder name.
+#: includes/Checks/Security/BackupsInWebroot.php:221
+#, php-format
+msgid "Could not read: %s"
+msgstr ""
+
+#: includes/Checks/Security/BackupsInWebroot.php:231
+msgid "No backup or database dump files found in the part that was scanned."
+msgstr ""
+
+#: includes/Checks/Security/BackupsInWebroot.php:233
+msgid "No backup or database dump files found in the site root, wp-content or uploads."
+msgstr ""
 
 #: includes/Checks/Security/ExposedDotfiles.php:61
 msgid "Exposed .git and .env files"
@@ -1637,7 +1637,13 @@ msgid "The page source shows WordPress %1$s, and %2$s is available."
 msgstr ""
 
 #. translators: %s: version number.
-#: includes/Checks/Security/Generator.php:93
+#: includes/Checks/Security/Generator.php:94
+#, php-format
+msgid "The page source shows the WordPress version (%s). Whether it is the latest could not be checked, because WordPress has no update data yet. Hiding it costs nothing."
+msgstr ""
+
+#. translators: %s: version number.
+#: includes/Checks/Security/Generator.php:99
 #, php-format
 msgid "The page source shows the WordPress version (%s). It is up to date, but hiding it costs nothing."
 msgstr ""
@@ -1740,15 +1746,15 @@ msgid_plural "The REST API lets anyone list login names (%d found)."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/Security/SelfProbe.php:181
+#: includes/Checks/Security/SelfProbe.php:182
 msgid "Refused: not an address of this site."
 msgstr ""
 
-#: includes/Checks/Security/SelfProbe.php:200
+#: includes/Checks/Security/SelfProbe.php:201
 msgid "Unexpected answer."
 msgstr ""
 
-#: includes/Checks/Security/SelfProbe.php:206
+#: includes/Checks/Security/SelfProbe.php:207
 msgid "No HTTP status."
 msgstr ""
 
@@ -1906,51 +1912,51 @@ msgid_plural "%d API keys are unused or idle for over a year."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:60
+#: includes/Checks/WooCommerce/GuestCheckout.php:59
 msgid "Guest checkout and accounts"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:67
+#: includes/Checks/WooCommerce/GuestCheckout.php:66
 msgid "Many shoppers abandon a purchase when forced to create an account. If guest checkout is off and checkout offers no account creation, customers cannot complete an order at all."
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:74
+#: includes/Checks/WooCommerce/GuestCheckout.php:73
 msgid "In WooCommerce, Settings, Accounts and Privacy, allow guest checkout or account creation at checkout."
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:86
+#: includes/Checks/WooCommerce/GuestCheckout.php:85
 msgid "Guest checkout: allowed"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:86
+#: includes/Checks/WooCommerce/GuestCheckout.php:85
 msgid "Guest checkout: not allowed"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:87
+#: includes/Checks/WooCommerce/GuestCheckout.php:86
 msgid "Account creation at checkout: allowed"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:87
+#: includes/Checks/WooCommerce/GuestCheckout.php:86
 msgid "Account creation at checkout: not allowed"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:88
+#: includes/Checks/WooCommerce/GuestCheckout.php:87
 msgid "Registration on the My account page: allowed"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:88
+#: includes/Checks/WooCommerce/GuestCheckout.php:87
 msgid "Registration on the My account page: not allowed"
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:93
+#: includes/Checks/WooCommerce/GuestCheckout.php:92
 msgid "Guest checkout is off and customers cannot create an account at checkout, so new customers may not be able to buy."
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:99
+#: includes/Checks/WooCommerce/GuestCheckout.php:98
 msgid "Customers can check out as guests."
 msgstr ""
 
-#: includes/Checks/WooCommerce/GuestCheckout.php:102
+#: includes/Checks/WooCommerce/GuestCheckout.php:101
 msgid "Customers must create an account to check out."
 msgstr ""
 
@@ -1982,85 +1988,85 @@ msgstr ""
 msgid "Orders use the old storage (posts table). The modern, faster order storage is off."
 msgstr ""
 
-#: includes/Checks/WooCommerce/NegativeStock.php:77
+#: includes/Checks/WooCommerce/NegativeStock.php:76
 msgid "Negative stock"
 msgstr ""
 
-#: includes/Checks/WooCommerce/NegativeStock.php:84
+#: includes/Checks/WooCommerce/NegativeStock.php:83
 msgid "A negative stock number means you sold more than you had (backorders or counting errors). Customers wait for goods you may not be able to deliver."
 msgstr ""
 
-#: includes/Checks/WooCommerce/NegativeStock.php:91
+#: includes/Checks/WooCommerce/NegativeStock.php:90
 msgid "Correct the stock quantity of these products, or review your backorder settings."
 msgstr ""
 
-#: includes/Checks/WooCommerce/NegativeStock.php:102
+#: includes/Checks/WooCommerce/NegativeStock.php:101
 msgid "Stock management is turned off, so stock levels are not tracked."
 msgstr ""
 
-#: includes/Checks/WooCommerce/NegativeStock.php:106
+#: includes/Checks/WooCommerce/NegativeStock.php:105
 msgid "No product has negative stock."
 msgstr ""
 
 #. translators: %d: number of products.
-#: includes/Checks/WooCommerce/NegativeStock.php:121
+#: includes/Checks/WooCommerce/NegativeStock.php:120
 #, php-format
 msgid "%d product has negative stock."
 msgid_plural "%d products have negative stock."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/Checks/WooCommerce/Pages.php:63
+#: includes/Checks/WooCommerce/Pages.php:62
 msgid "Cart, checkout and account pages"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:70
+#: includes/Checks/WooCommerce/Pages.php:69
 msgid "WooCommerce needs a cart page, a checkout page, a My account page and a shop page. If the cart or checkout page is missing or not published, customers cannot buy anything."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:77
+#: includes/Checks/WooCommerce/Pages.php:76
 msgid "In WooCommerce, Status, Tools, use \"Create default WooCommerce pages\", or assign and publish the pages in Settings, Advanced."
 msgstr ""
 
 #. translators: %s: page name.
-#: includes/Checks/WooCommerce/Pages.php:96
+#: includes/Checks/WooCommerce/Pages.php:95
 #, php-format
 msgid "%s: no page assigned"
 msgstr ""
 
 #. translators: %s: page name.
-#: includes/Checks/WooCommerce/Pages.php:102
+#: includes/Checks/WooCommerce/Pages.php:101
 #, php-format
 msgid "%s: the assigned page does not exist any more"
 msgstr ""
 
 #. translators: 1: page name, 2: post status such as draft or trash.
-#: includes/Checks/WooCommerce/Pages.php:108
+#: includes/Checks/WooCommerce/Pages.php:107
 #, php-format
 msgid "%1$s: page is not published (status: %2$s)"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:122
+#: includes/Checks/WooCommerce/Pages.php:121
 msgid "The cart, checkout, My account and shop pages are all published."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:125
+#: includes/Checks/WooCommerce/Pages.php:124
 msgid "Some core store pages are missing or not published."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:137
+#: includes/Checks/WooCommerce/Pages.php:136
 msgid "Cart page"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:139
+#: includes/Checks/WooCommerce/Pages.php:138
 msgid "Checkout page"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:141
+#: includes/Checks/WooCommerce/Pages.php:140
 msgid "My account page"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Pages.php:143
+#: includes/Checks/WooCommerce/Pages.php:142
 msgid "Shop page"
 msgstr ""
 
@@ -2104,24 +2110,24 @@ msgstr[1] ""
 msgid "Locations not covered by other zones"
 msgstr ""
 
-#: includes/Checks/WooCommerce/StaleOrders.php:61
+#: includes/Checks/WooCommerce/StaleOrders.php:60
 msgid "Abandoned orders"
 msgstr ""
 
-#: includes/Checks/WooCommerce/StaleOrders.php:68
+#: includes/Checks/WooCommerce/StaleOrders.php:67
 msgid "Orders that stayed pending or failed for more than 30 days are abandoned checkouts. Some are customers you could win back; a huge pile also slows down the order list and database."
 msgstr ""
 
-#: includes/Checks/WooCommerce/StaleOrders.php:75
+#: includes/Checks/WooCommerce/StaleOrders.php:74
 msgid "Follow up with these customers, then cancel or delete the old orders (WooCommerce, Orders, filter by status)."
 msgstr ""
 
-#: includes/Checks/WooCommerce/StaleOrders.php:88
+#: includes/Checks/WooCommerce/StaleOrders.php:87
 msgid "No pending or failed orders older than 30 days."
 msgstr ""
 
 #. translators: 1: total orders, 2: pending orders, 3: failed orders.
-#: includes/Checks/WooCommerce/StaleOrders.php:93
+#: includes/Checks/WooCommerce/StaleOrders.php:92
 #, php-format
 msgid "%1$d order is older than 30 days (%2$d pending, %3$d failed)."
 msgid_plural "%1$d orders are older than 30 days (%2$d pending, %3$d failed)."
@@ -2129,49 +2135,49 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of orders.
-#: includes/Checks/WooCommerce/StaleOrders.php:101
+#: includes/Checks/WooCommerce/StaleOrders.php:100
 #, php-format
 msgid "Pending for over 30 days: %d"
 msgstr ""
 
 #. translators: %d: number of orders.
-#: includes/Checks/WooCommerce/StaleOrders.php:106
+#: includes/Checks/WooCommerce/StaleOrders.php:105
 #, php-format
 msgid "Failed for over 30 days: %d"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Taxes.php:75
+#: includes/Checks/WooCommerce/Taxes.php:74
 msgid "Tax rates"
 msgstr ""
 
-#: includes/Checks/WooCommerce/Taxes.php:82
+#: includes/Checks/WooCommerce/Taxes.php:81
 msgid "If tax calculation is turned on but no rates are defined and no tax service is connected, every order is charged zero tax. That can mean wrongly priced products and trouble with tax authorities."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Taxes.php:89
+#: includes/Checks/WooCommerce/Taxes.php:88
 msgid "In WooCommerce, Settings, Tax, add the tax rates that apply to you (or turn tax calculation off if you do not charge tax)."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Taxes.php:100
+#: includes/Checks/WooCommerce/Taxes.php:99
 msgid "Tax calculation is turned off."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Taxes.php:107
+#: includes/Checks/WooCommerce/Taxes.php:106
 msgid "Tax calculation is on and an automatic tax service works out the tax."
 msgstr ""
 
 #. translators: %s: name of the tax service.
-#: includes/Checks/WooCommerce/Taxes.php:110
+#: includes/Checks/WooCommerce/Taxes.php:109
 #, php-format
 msgid "Taxes are calculated automatically by %s."
 msgstr ""
 
-#: includes/Checks/WooCommerce/Taxes.php:114
+#: includes/Checks/WooCommerce/Taxes.php:113
 msgid "No manual tax rates are set. If an automatic tax service calculates your tax, this is fine; otherwise no tax is added."
 msgstr ""
 
 #. translators: %d: number of tax rates.
-#: includes/Checks/WooCommerce/Taxes.php:120
+#: includes/Checks/WooCommerce/Taxes.php:119
 #, php-format
 msgid "Tax calculation is on with %d tax rate."
 msgid_plural "Tax calculation is on with %d tax rates."
@@ -2208,34 +2214,34 @@ msgstr ""
 msgid "A published terms and conditions page is set."
 msgstr ""
 
-#: includes/Checks/WooCommerce/TestGateways.php:80
+#: includes/Checks/WooCommerce/TestGateways.php:79
 msgid "Payment gateways"
 msgstr ""
 
-#: includes/Checks/WooCommerce/TestGateways.php:87
+#: includes/Checks/WooCommerce/TestGateways.php:86
 msgid "A payment method left in test (sandbox) mode accepts orders without charging real money. Customers think they paid, and you ship goods for free. With no payment method at all, nobody can pay."
 msgstr ""
 
-#: includes/Checks/WooCommerce/TestGateways.php:94
+#: includes/Checks/WooCommerce/TestGateways.php:93
 msgid "In WooCommerce, Settings, Payments, switch the gateway to live mode and enter the live keys, or enable a payment method."
 msgstr ""
 
-#: includes/Checks/WooCommerce/TestGateways.php:114
+#: includes/Checks/WooCommerce/TestGateways.php:113
 msgid "No payment method is enabled, so customers cannot pay."
 msgstr ""
 
 #. translators: %s: gateway names.
-#: includes/Checks/WooCommerce/TestGateways.php:128
+#: includes/Checks/WooCommerce/TestGateways.php:127
 #, php-format
 msgid "Test mode is on for: %s. Real customers' payments will not be charged."
 msgstr ""
 
-#: includes/Checks/WooCommerce/TestGateways.php:137
+#: includes/Checks/WooCommerce/TestGateways.php:136
 msgid "Only offline payment methods (bank transfer, cheque or cash on delivery) are enabled."
 msgstr ""
 
 #. translators: %d: number of enabled payment methods.
-#: includes/Checks/WooCommerce/TestGateways.php:145
+#: includes/Checks/WooCommerce/TestGateways.php:144
 #, php-format
 msgid "%d payment method is enabled and none is in test mode."
 msgid_plural "%d payment methods are enabled and none is in test mode."
@@ -2280,7 +2286,23 @@ msgstr[1] ""
 msgid "Overall score: %d / 100"
 msgstr ""
 
-#: includes/Plugin.php:108
+#: includes/MarkdownFormatter.php:81
+msgid "Date:"
+msgstr ""
+
+#: includes/MarkdownFormatter.php:82
+msgid "Overall score:"
+msgstr ""
+
+#: includes/MarkdownFormatter.php:85
+msgid "Versions:"
+msgstr ""
+
+#: includes/MarkdownFormatter.php:121
+msgid "Scores by section"
+msgstr ""
+
+#: includes/Plugin.php:113
 msgid "Store Audit for WooCommerce needs WooCommerce to be installed and active."
 msgstr ""
 
@@ -2303,7 +2325,7 @@ msgid "The check \"%1$s\" uses the unknown section \"%2$s\". The check was not a
 msgstr ""
 
 #. translators: %d: number of items whose details are left out.
-#: includes/Report.php:250
+#: includes/Report.php:115
 #, php-format
 msgid "%d item. Details are shown only on the Store Audit screen in wp-admin."
 msgid_plural "%d items. Details are shown only on the Store Audit screen in wp-admin."
@@ -2311,27 +2333,11 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: web address of the plugin author.
-#: includes/Report.php:267
-#: includes/Report.php:278
-#: includes/Report.php:289
+#: includes/Report.php:132
+#: includes/Report.php:143
+#: includes/Report.php:154
 #, php-format
 msgid "Report generated by Store Audit for WooCommerce by Andrew Rozumny, %s"
-msgstr ""
-
-#: includes/Report.php:455
-msgid "Date:"
-msgstr ""
-
-#: includes/Report.php:457
-msgid "Overall score:"
-msgstr ""
-
-#: includes/Report.php:459
-msgid "Versions:"
-msgstr ""
-
-#: includes/Report.php:463
-msgid "Scores by section"
 msgstr ""
 
 #. translators: %s: reason, for example "the database table wp_wc_orders does not exist.".

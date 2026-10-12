@@ -18,6 +18,13 @@ use StoreAudit\Result;
 final class FakeCheck extends AbstractCheck {
 
 	/**
+	 * Behaviour of run(), or null for a plain "fine" result.
+	 *
+	 * @var \Closure|null
+	 */
+	private ?\Closure $callback;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param string        $check_id  Id.
@@ -27,8 +34,9 @@ final class FakeCheck extends AbstractCheck {
 	public function __construct(
 		private readonly string $check_id = 'environment_fake',
 		private readonly string $section = 'environment',
-		private $callback = null
+		?callable $callback = null
 	) {
+		$this->callback = null === $callback ? null : \Closure::fromCallable( $callback );
 	}
 
 	/**

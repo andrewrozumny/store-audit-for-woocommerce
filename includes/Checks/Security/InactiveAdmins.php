@@ -33,16 +33,16 @@ final class InactiveAdmins extends AbstractSecurityCheck {
 	/**
 	 * Administrators provider.
 	 *
-	 * @var callable|null
+	 * @var \Closure|null
 	 */
-	private $admins;
+	private ?\Closure $admins;
 
 	/**
 	 * User meta reader: (user id, key) returns the value.
 	 *
-	 * @var callable|null
+	 * @var \Closure|null
 	 */
-	private $meta;
+	private ?\Closure $meta;
 
 	/**
 	 * Current time.
@@ -59,8 +59,8 @@ final class InactiveAdmins extends AbstractSecurityCheck {
 	 * @param int|null      $now    Current timestamp (tests).
 	 */
 	public function __construct( ?callable $admins = null, ?callable $meta = null, ?int $now = null ) {
-		$this->admins = $admins;
-		$this->meta   = $meta;
+		$this->admins = null === $admins ? null : \Closure::fromCallable( $admins );
+		$this->meta   = null === $meta ? null : \Closure::fromCallable( $meta );
 		$this->now    = $now ?? time();
 	}
 

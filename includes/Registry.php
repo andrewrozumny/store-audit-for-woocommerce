@@ -17,14 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Collects checks from all section providers.
+ * Collects checks from all section providers and from the `store_audit_checks` filter, and keeps only valid ones.
  */
 final class Registry {
 
 	/**
-	 * All registered checks keyed by id.
+	 * All registered checks keyed by id, in the order they run.
 	 *
-	 * @return array<string,CheckInterface>
+	 * @return array<string,CheckInterface> Valid checks only; an empty array when the filter returns something that is not a list.
 	 */
 	public static function all(): array {
 		$checks = array_merge(
@@ -63,7 +63,7 @@ final class Registry {
 				sprintf(
 					/* translators: %s: check id. */
 					__( 'The check id "%s" is not valid. Use lower-case letters a-z, digits 0-9 and underscores only. The check was not added.', 'store-audit-for-woocommerce' ),
-					esc_html( $id )
+					$id
 				)
 			);
 			return false;
@@ -73,7 +73,7 @@ final class Registry {
 				sprintf(
 					/* translators: %s: check id. */
 					__( 'A check with the id "%s" is already registered. The second check was not added.', 'store-audit-for-woocommerce' ),
-					esc_html( $id )
+					$id
 				)
 			);
 			return false;
@@ -83,8 +83,8 @@ final class Registry {
 				sprintf(
 					/* translators: 1: check id, 2: section id. */
 					__( 'The check "%1$s" uses the unknown section "%2$s". The check was not added.', 'store-audit-for-woocommerce' ),
-					esc_html( $id ),
-					esc_html( $check->section() )
+					$id,
+					$check->section()
 				)
 			);
 			return false;
@@ -95,10 +95,10 @@ final class Registry {
 	/**
 	 * Tell the developer that a check was dropped.
 	 *
-	 * @param string $message Already escaped message.
+	 * @param string $message Plain-text message; escaped here.
 	 */
 	private static function reject( string $message ): void {
-		_doing_it_wrong( 'store_audit_checks', $message, '0.1.1' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic parts are escaped above.
+		_doing_it_wrong( 'store_audit_checks', esc_html( $message ), '0.1.1' );
 	}
 
 	/**
@@ -108,9 +108,14 @@ final class Registry {
 	 */
 	private static function filter_checks( array $checks ): mixed {
 		/**
-		 * Filters the list of audit checks.
+		 * Filters the list of audit checks. Add a check by appending an object that implements CheckInterface.
+		 * An item that is not such an object is skipped silently; a check with an invalid or repeated id, or in an
+		 * unknown section, is skipped and reported with _doing_it_wrong().
 		 *
-		 * @param list<CheckInterface> $checks Checks.
+		 * @since 0.1.0
+		 *
+		 * @param list<CheckInterface> $checks The registered checks, in the order they run.
+		 * @return list<CheckInterface> The checks to run.
 		 */
 		return apply_filters( 'store_audit_checks', array_values( $checks ) );
 	}
@@ -119,6 +124,7 @@ final class Registry {
 	 * Find a check by id.
 	 *
 	 * @param string $id Check id.
+	 * @return CheckInterface|null The check, or null when no check has that id.
 	 */
 	public static function get( string $id ): ?CheckInterface {
 		return self::all()[ $id ] ?? null;

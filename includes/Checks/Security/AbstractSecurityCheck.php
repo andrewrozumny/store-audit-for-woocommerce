@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
+use StoreAudit\Support\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Support\Arr;
 

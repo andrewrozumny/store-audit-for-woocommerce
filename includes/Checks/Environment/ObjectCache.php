@@ -12,9 +12,8 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
-use Automattic\WooCommerce\Utilities\OrderUtil;
 use StoreAudit\Support\Arr;
-use StoreAudit\Support\Db;
+use StoreAudit\Support\OrderStats;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -89,18 +88,9 @@ final class ObjectCache extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		$db       = Db::wpdb();
 		$counts   = wp_count_posts( 'product' );
 		$products = Arr::to_int( $counts->publish ?? null );
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only count for the audit; there is no cheaper WooCommerce API.
-		if ( class_exists( OrderUtil::class ) && OrderUtil::custom_orders_table_usage_is_enabled() ) {
-			Db::require_table( $db->prefix . 'wc_orders' );
-			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE type = 'shop_order'", $db->prefix . 'wc_orders' ) ) );
-		} else {
-			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'shop_order'", $db->posts ) ) );
-		}
-		// phpcs:enable
+		$orders   = OrderStats::count();
 
 		return array(
 			'ext'      => wp_using_ext_object_cache(),

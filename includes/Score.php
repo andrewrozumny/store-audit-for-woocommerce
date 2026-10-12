@@ -49,22 +49,8 @@ final class Score {
 	 * @return array{overall:int,checked:int,total:int,incomplete:bool,sections:array<string,array{score:int|null,counts:array<string,int>,checked:int,total:int,incomplete:bool}>}
 	 */
 	public static function calculate( array $results ): array {
-		$weights = Section::weights();
-		$empty   = array_fill_keys( Result::severities(), 0 );
-		$counts  = array();
-
-		foreach ( $results as $row ) {
-			$section  = Arr::get_string( $row, 'section' );
-			$severity = Arr::get_string( $row, 'severity' );
-			if ( ! isset( $weights[ $section ] ) || ! isset( self::PENALTY[ $severity ] ) ) {
-				continue;
-			}
-			if ( ! isset( $counts[ $section ] ) ) {
-				$counts[ $section ] = $empty;
-			}
-			++$counts[ $section ][ $severity ];
-		}
-
+		$weights    = Section::weights();
+		$counts     = self::count_by_section( $results, $weights );
 		$sections   = array();
 		$weighted   = 0;
 		$total_w    = 0;
@@ -76,36 +62,17 @@ final class Score {
 			if ( ! isset( $counts[ $section ] ) ) {
 				continue;
 			}
-			$section_counts = $counts[ $section ];
-			$total          = array_sum( $section_counts );
-			$checked        = $total - $section_counts[ Result::ERROR ];
-			$all_checks    += $total;
-			$all_ran       += $checked;
-			$critical      += $section_counts[ Result::CRITICAL ];
-
-			$section_incomplete = $checked <= 0 || ( $total - $checked ) * 2 > $total;
-			$score              = null;
-			if ( ! $section_incomplete ) {
-				$score = 100;
-				foreach ( self::PENALTY as $severity => $penalty ) {
-					$score -= $penalty * $section_counts[ $severity ];
-				}
-				$score = max( 0, $score );
-				if ( $section_counts[ Result::CRITICAL ] > 0 ) {
-					$score = min( $score, self::SECTION_CRITICAL_CAP );
-				}
-				$weighted += $score * $weights[ $section ];
-				$total_w  += $weights[ $section ];
-			} else {
+			$entry                = self::score_section( $counts[ $section ] );
+			$sections[ $section ] = $entry;
+			$all_checks          += $entry['total'];
+			$all_ran             += $entry['checked'];
+			$critical            += $entry['counts'][ Result::CRITICAL ];
+			if ( null === $entry['score'] ) {
 				$incomplete = true;
+				continue;
 			}
-			$sections[ $section ] = array(
-				'score'      => $score,
-				'counts'     => $section_counts,
-				'checked'    => $checked,
-				'total'      => $total,
-				'incomplete' => $section_incomplete,
-			);
+			$weighted += $entry['score'] * $weights[ $section ];
+			$total_w  += $weights[ $section ];
 		}
 
 		$overall = $total_w > 0 ? (int) round( $weighted / $total_w ) : 0;
@@ -123,6 +90,83 @@ final class Score {
 			'incomplete' => $incomplete,
 			'sections'   => $sections,
 		);
+	}
+
+	/**
+	 * Count results per section and severity. Rows of unknown sections or severities are ignored.
+	 *
+	 * @param list<array<string,mixed>> $results Results (need `section` and `severity`).
+	 * @param array<string,int>         $weights Section weights, keyed by section id.
+	 * @return array<string,array<string,int>> Severity counts keyed by section id, only for sections that have rows.
+	 */
+	private static function count_by_section( array $results, array $weights ): array {
+		$empty  = array_fill_keys( Result::severities(), 0 );
+		$counts = array();
+		foreach ( $results as $row ) {
+			$section  = Arr::get_string( $row, 'section' );
+			$severity = Arr::get_string( $row, 'severity' );
+			if ( ! isset( $weights[ $section ] ) || ! isset( self::PENALTY[ $severity ] ) ) {
+				continue;
+			}
+			if ( ! isset( $counts[ $section ] ) ) {
+				$counts[ $section ] = $empty;
+			}
+			++$counts[ $section ][ $severity ];
+		}
+		return $counts;
+	}
+
+	/**
+	 * Score of one section from its severity counts. The score is null (incomplete) when more than half of the
+	 * section's checks did not run.
+	 *
+	 * @param array<string,int> $section_counts Severity counts of the section.
+	 * @return array{score:int|null,counts:array<string,int>,checked:int,total:int,incomplete:bool}
+	 */
+	private static function score_section( array $section_counts ): array {
+		$total      = array_sum( $section_counts );
+		$checked    = $total - $section_counts[ Result::ERROR ];
+		$incomplete = $checked <= 0 || ( $total - $checked ) * 2 > $total;
+		$score      = null;
+		if ( ! $incomplete ) {
+			$score = 100;
+			foreach ( self::PENALTY as $severity => $penalty ) {
+				$score -= $penalty * $section_counts[ $severity ];
+			}
+			$score = max( 0, $score );
+			if ( $section_counts[ Result::CRITICAL ] > 0 ) {
+				$score = min( $score, self::SECTION_CRITICAL_CAP );
+			}
+		}
+		return array(
+			'score'      => $score,
+			'counts'     => $section_counts,
+			'checked'    => $checked,
+			'total'      => $total,
+			'incomplete' => $incomplete,
+		);
+	}
+
+	/**
+	 * Section scores as stored in a report: the calculated numbers plus the section label.
+	 *
+	 * @param array<string,array{score:int|null,counts:array<string,int>,checked:int,total:int,incomplete:bool}> $sections Calculated sections.
+	 * @param array<string,string>                                                                               $labels   Section labels.
+	 * @return array<string,array{label:string,score:int|null,counts:array<string,int>,checked:int,total:int,incomplete:bool}>
+	 */
+	public static function with_labels( array $sections, array $labels ): array {
+		$out = array();
+		foreach ( $sections as $id => $data ) {
+			$out[ $id ] = array(
+				'label'      => $labels[ $id ] ?? $id,
+				'score'      => $data['score'],
+				'counts'     => $data['counts'],
+				'checked'    => $data['checked'],
+				'total'      => $data['total'],
+				'incomplete' => $data['incomplete'],
+			);
+		}
+		return $out;
 	}
 
 	/**

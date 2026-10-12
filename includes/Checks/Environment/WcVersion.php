@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\VersionBranch;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -121,6 +122,7 @@ final class WcVersion extends AbstractCheck {
 		$current = Arr::get_string( $d, 'current' );
 		$latest  = isset( $d['latest'] ) ? Arr::get_string( $d, 'latest' ) : null;
 
+		// Defensive: the plugin header declares WooCommerce 9.0 as the minimum, so this branch is not reached on a supported install.
 		if ( version_compare( $current, '9.0', '<' ) ) {
 			return Result::critical(
 				/* translators: %s: WooCommerce version. */
@@ -142,12 +144,7 @@ final class WcVersion extends AbstractCheck {
 			);
 		}
 
-		$branch = static function ( string $version ): string {
-			$parts = explode( '.', $version );
-			return $parts[0] . '.' . ( $parts[1] ?? '0' );
-		};
-
-		if ( $branch( $current ) !== $branch( $latest ) ) {
+		if ( VersionBranch::of( $current ) !== VersionBranch::of( $latest ) ) {
 			return Result::warning(
 				/* translators: 1: installed WooCommerce version, 2: latest version. */
 				sprintf( __( 'WooCommerce %1$s is installed, version %2$s is available.', 'store-audit-for-woocommerce' ), $current, $latest )

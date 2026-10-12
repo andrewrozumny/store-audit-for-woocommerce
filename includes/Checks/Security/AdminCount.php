@@ -23,9 +23,9 @@ final class AdminCount extends AbstractSecurityCheck {
 	/**
 	 * Administrators provider.
 	 *
-	 * @var callable|null
+	 * @var \Closure|null
 	 */
-	private $admins;
+	private ?\Closure $admins;
 
 	/**
 	 * Constructor.
@@ -33,7 +33,7 @@ final class AdminCount extends AbstractSecurityCheck {
 	 * @param callable|null $admins Returns the administrator accounts (tests).
 	 */
 	public function __construct( ?callable $admins = null ) {
-		$this->admins = $admins;
+		$this->admins = null === $admins ? null : \Closure::fromCallable( $admins );
 	}
 
 	/**

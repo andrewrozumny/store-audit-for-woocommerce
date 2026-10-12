@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
@@ -43,9 +42,9 @@ final class NegativeStock extends AbstractCheck {
 	/**
 	 * Returns array{managing:bool,count:int,names:list<string>}.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Constructor.
@@ -53,7 +52,7 @@ final class NegativeStock extends AbstractCheck {
 	 * @param callable|null $source Data source override for tests.
 	 */
 	public function __construct( ?callable $source = null ) {
-		$this->source = $source ?? array( $this, 'read_stock' );
+		$this->source = \Closure::fromCallable( $source ?? array( $this, 'read_stock' ) );
 	}
 
 	/**

@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\DetailList;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -55,9 +56,9 @@ final class PluginsAbandoned extends AbstractCheck {
 	/**
 	 * Clock returning unix time with microseconds.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $clock;
+	private \Closure $clock;
 
 	/**
 	 * Current unix time (for age comparison).
@@ -77,7 +78,7 @@ final class PluginsAbandoned extends AbstractCheck {
 	public function __construct( ?PluginInventory $inventory = null, ?WporgApi $api = null, ?callable $clock = null, ?int $now = null ) {
 		$this->inventory = $inventory ?? new PluginInventory();
 		$this->api       = $api ?? new WporgApi();
-		$this->clock     = $clock ?? static fn(): float => microtime( true );
+		$this->clock     = \Closure::fromCallable( $clock ?? static fn(): float => microtime( true ) );
 		$this->now       = $now ?? time();
 	}
 
@@ -120,18 +121,28 @@ final class PluginsAbandoned extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$installed = $this->inventory->installed();
-		$start     = Arr::to_float( ( $this->clock )() );
-		$cutoff    = strtotime( '-12 months', $this->now );
+		return self::verdict( $this->scan( $this->inventory->installed() ) );
+	}
 
-		$closed      = array();
-		$closed_sec  = array();
-		$abandoned   = array();
-		$unchecked   = array();
-		$unavailable = 0;
-		$skipped     = 0;
-		$looked_up   = 0;
+	/**
+	 * Look every installed plugin up on wordpress.org, within the plugin and time limits.
+	 *
+	 * @param array<string,array<string,mixed>> $installed Installed plugins keyed by file.
+	 * @return array{closed:list<string>,closed_sec:list<string>,abandoned:list<string>,unchecked:list<string>,unavailable:int,skipped:int}
+	 */
+	private function scan( array $installed ): array {
+		$start  = Arr::to_float( ( $this->clock )() );
+		$cutoff = strtotime( '-12 months', $this->now );
+		$tally  = array(
+			'closed'      => array(),
+			'closed_sec'  => array(),
+			'abandoned'   => array(),
+			'unchecked'   => array(),
+			'unavailable' => 0,
+			'skipped'     => 0,
+		);
 
+		$looked_up = 0;
 		foreach ( array_keys( $installed ) as $file ) {
 			if ( self::SELF_SLUG === WporgApi::slug_from_file( $file ) ) {
 				continue;
@@ -139,7 +150,7 @@ final class PluginsAbandoned extends AbstractCheck {
 			$name = PluginInventory::name_of( $installed, $file );
 			$host = self::foreign_update_host( Arr::get_string( $installed[ $file ], 'UpdateURI' ) );
 			if ( '' !== $host ) {
-				$unchecked[] = sprintf(
+				$tally['unchecked'][] = sprintf(
 					/* translators: 1: plugin name, 2: host name that serves the updates. */
 					__( '%1$s: not checked, updates come from %2$s', 'store-audit-for-woocommerce' ),
 					$name,
@@ -148,73 +159,101 @@ final class PluginsAbandoned extends AbstractCheck {
 				continue;
 			}
 			if ( $looked_up >= self::MAX_PLUGINS || ( Arr::to_float( ( $this->clock )() ) - $start ) > self::BUDGET_SECONDS ) {
-				++$skipped;
+				++$tally['skipped'];
 				continue;
 			}
 			++$looked_up;
 
-			$info = $this->api->plugin( WporgApi::slug_from_file( $file ) );
-			if ( in_array( $info['status'], array( WporgApi::FOUND, WporgApi::CLOSED ), true ) && ! self::same_plugin( Arr::get_string( $installed[ $file ], 'Name' ), $info['name'] ) ) {
-				// Someone else's plugin has this slug on wordpress.org, so its dates and its closure say nothing about this one.
-				$info['status'] = WporgApi::NOT_FOUND;
-			}
-			switch ( $info['status'] ) {
-				case WporgApi::CLOSED:
-					$line = '' !== $info['reason']
-						? sprintf(
-							/* translators: 1: plugin name, 2: reason text. */
-							__( '%1$s: closed on wordpress.org (%2$s)', 'store-audit-for-woocommerce' ),
-							$name,
-							$info['reason']
-						)
-						: sprintf(
-							/* translators: %s: plugin name. */
-							__( '%s: closed on wordpress.org', 'store-audit-for-woocommerce' ),
-							$name
-						);
-					if ( $info['security'] ) {
-						$closed_sec[] = $line;
-					} else {
-						$closed[] = $line;
-					}
-					break;
-				case WporgApi::FOUND:
-					if ( $info['last_updated'] > 0 && $info['last_updated'] < $cutoff ) {
-						$abandoned[] = sprintf(
-							/* translators: 1: plugin name, 2: date of last update. */
-							__( '%1$s: last updated %2$s', 'store-audit-for-woocommerce' ),
-							$name,
-							gmdate( 'j M Y', $info['last_updated'] )
-						);
-					}
-					break;
-				case WporgApi::NOT_FOUND:
-					$unchecked[] = sprintf(
-						/* translators: %s: plugin name. */
-						__( '%s: not checked, it is not hosted on wordpress.org', 'store-audit-for-woocommerce' ),
-						$name
-					);
-					break;
-				default:
-					++$unavailable;
-			}
+			$tally = self::record( $tally, $name, $this->look_up( $installed[ $file ], $file ), $cutoff );
 		}
+		return $tally;
+	}
 
-		$notes = $unchecked;
-		if ( $skipped > 0 ) {
-			$notes[] = sprintf(
-				/* translators: %d: number of plugins. */
-				_n( '%d plugin not checked (time limit)', '%d plugins not checked (time limit)', $skipped, 'store-audit-for-woocommerce' ),
-				$skipped
+	/**
+	 * What wordpress.org says about one installed plugin.
+	 *
+	 * @param array<string,mixed> $headers Plugin headers.
+	 * @param string              $file    Plugin file.
+	 * @return array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool}
+	 */
+	private function look_up( array $headers, string $file ): array {
+		$info = $this->api->plugin( WporgApi::slug_from_file( $file ) );
+		if ( in_array( $info['status'], array( WporgApi::FOUND, WporgApi::CLOSED ), true ) && ! self::same_plugin( Arr::get_string( $headers, 'Name' ), $info['name'] ) ) {
+			// Someone else's plugin has this slug on wordpress.org, so its dates and its closure say nothing about this one.
+			$info['status'] = WporgApi::NOT_FOUND;
+		}
+		return $info;
+	}
+
+	/**
+	 * Add one lookup result to the tally.
+	 *
+	 * @param array{closed:list<string>,closed_sec:list<string>,abandoned:list<string>,unchecked:list<string>,unavailable:int,skipped:int} $tally  Tally so far.
+	 * @param string                                                                                                                       $name   Plugin name.
+	 * @param array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool}                                 $info   Lookup result.
+	 * @param int|false                                                                                                                    $cutoff Unix time before which a plugin counts as abandoned.
+	 * @return array{closed:list<string>,closed_sec:list<string>,abandoned:list<string>,unchecked:list<string>,unavailable:int,skipped:int}
+	 */
+	private static function record( array $tally, string $name, array $info, int|false $cutoff ): array {
+		switch ( $info['status'] ) {
+			case WporgApi::CLOSED:
+				$tally[ $info['security'] ? 'closed_sec' : 'closed' ][] = self::closed_line( $name, $info['reason'] );
+				break;
+			case WporgApi::FOUND:
+				if ( $info['last_updated'] > 0 && $info['last_updated'] < $cutoff ) {
+					$tally['abandoned'][] = sprintf(
+						/* translators: 1: plugin name, 2: date of last update. */
+						__( '%1$s: last updated %2$s', 'store-audit-for-woocommerce' ),
+						$name,
+						gmdate( 'j M Y', $info['last_updated'] )
+					);
+				}
+				break;
+			case WporgApi::NOT_FOUND:
+				$tally['unchecked'][] = sprintf(
+					/* translators: %s: plugin name. */
+					__( '%s: not checked, it is not hosted on wordpress.org', 'store-audit-for-woocommerce' ),
+					$name
+				);
+				break;
+			default:
+				++$tally['unavailable'];
+		}
+		return $tally;
+	}
+
+	/**
+	 * Detail line for a plugin closed on wordpress.org.
+	 *
+	 * @param string $name   Plugin name.
+	 * @param string $reason Closure reason, may be empty.
+	 */
+	private static function closed_line( string $name, string $reason ): string {
+		if ( '' === $reason ) {
+			return sprintf(
+				/* translators: %s: plugin name. */
+				__( '%s: closed on wordpress.org', 'store-audit-for-woocommerce' ),
+				$name
 			);
 		}
-		if ( $unavailable > 0 ) {
-			$notes[] = sprintf(
-				/* translators: %d: number of plugins. */
-				_n( '%d plugin not checked (wordpress.org did not answer)', '%d plugins not checked (wordpress.org did not answer)', $unavailable, 'store-audit-for-woocommerce' ),
-				$unavailable
-			);
-		}
+		return sprintf(
+			/* translators: 1: plugin name, 2: reason text. */
+			__( '%1$s: closed on wordpress.org (%2$s)', 'store-audit-for-woocommerce' ),
+			$name,
+			$reason
+		);
+	}
+
+	/**
+	 * Result from the tally: security closures are critical, other closures and old plugins warnings.
+	 *
+	 * @param array{closed:list<string>,closed_sec:list<string>,abandoned:list<string>,unchecked:list<string>,unavailable:int,skipped:int} $tally Tally of the scan.
+	 */
+	private static function verdict( array $tally ): Result {
+		$closed_sec = $tally['closed_sec'];
+		$closed     = $tally['closed'];
+		$abandoned  = $tally['abandoned'];
+		$notes      = self::notes( $tally );
 
 		if ( array() !== $closed_sec ) {
 			return Result::critical(
@@ -257,6 +296,31 @@ final class PluginsAbandoned extends AbstractCheck {
 		}
 
 		return Result::ok( __( 'All plugins were updated within the last year.', 'store-audit-for-woocommerce' ) );
+	}
+
+	/**
+	 * Notes about plugins that could not be checked, including the time-limit and unreachable counts.
+	 *
+	 * @param array{closed:list<string>,closed_sec:list<string>,abandoned:list<string>,unchecked:list<string>,unavailable:int,skipped:int} $tally Tally of the scan.
+	 * @return list<string>
+	 */
+	private static function notes( array $tally ): array {
+		$notes = $tally['unchecked'];
+		if ( $tally['skipped'] > 0 ) {
+			$notes[] = sprintf(
+				/* translators: %d: number of plugins. */
+				_n( '%d plugin not checked (time limit)', '%d plugins not checked (time limit)', $tally['skipped'], 'store-audit-for-woocommerce' ),
+				$tally['skipped']
+			);
+		}
+		if ( $tally['unavailable'] > 0 ) {
+			$notes[] = sprintf(
+				/* translators: %d: number of plugins. */
+				_n( '%d plugin not checked (wordpress.org did not answer)', '%d plugins not checked (wordpress.org did not answer)', $tally['unavailable'], 'store-audit-for-woocommerce' ),
+				$tally['unavailable']
+			);
+		}
+		return $notes;
 	}
 
 	/**

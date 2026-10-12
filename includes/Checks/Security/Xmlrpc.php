@@ -25,9 +25,9 @@ final class Xmlrpc extends AbstractProbeCheck {
 	/**
 	 * Returns the names of the things on this site that need xmlrpc.php.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $dependents;
+	private \Closure $dependents;
 
 	/**
 	 * Constructor.
@@ -37,7 +37,7 @@ final class Xmlrpc extends AbstractProbeCheck {
 	 */
 	public function __construct( ?SelfProbe $probe = null, ?callable $dependents = null ) {
 		parent::__construct( $probe );
-		$this->dependents = $dependents ?? array( $this, 'read_dependents' );
+		$this->dependents = \Closure::fromCallable( $dependents ?? array( $this, 'read_dependents' ) );
 	}
 
 	/**

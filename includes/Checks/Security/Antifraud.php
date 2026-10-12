@@ -64,9 +64,9 @@ final class Antifraud extends AbstractSecurityCheck {
 	/**
 	 * Active plugin basenames provider (tests).
 	 *
-	 * @var callable|null
+	 * @var \Closure|null
 	 */
-	private $active;
+	private ?\Closure $active;
 
 	/**
 	 * Constructor.
@@ -74,7 +74,7 @@ final class Antifraud extends AbstractSecurityCheck {
 	 * @param callable|null $active Returns the list of active plugin basenames (tests).
 	 */
 	public function __construct( ?callable $active = null ) {
-		$this->active = $active;
+		$this->active = null === $active ? null : \Closure::fromCallable( $active );
 	}
 
 	/**
@@ -176,6 +176,14 @@ final class Antifraud extends AbstractSecurityCheck {
 	 * Run the slugs through the public filter. The result is untyped on purpose.
 	 */
 	private function filtered_slugs(): mixed {
+		/**
+		 * Filters the slugs of the login limiter, captcha and fraud tool plugins that count as protection.
+		 *
+		 * @since 0.1.0
+		 *
+		 * @param list<string> $slugs Plugin slugs (folder name, or file name without ".php").
+		 * @return list<string> The slugs that count as protection.
+		 */
 		return apply_filters( 'store_audit_antifraud_plugins', self::known() );
 	}
 }

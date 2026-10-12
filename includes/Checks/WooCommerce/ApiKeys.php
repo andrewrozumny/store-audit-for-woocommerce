@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
+use StoreAudit\Support\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
@@ -28,9 +28,9 @@ final class ApiKeys extends AbstractCheck {
 	/**
 	 * Returns list<array{description:string,permissions:string,last_access:?string,user:string}>.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Current unix time.
@@ -46,7 +46,7 @@ final class ApiKeys extends AbstractCheck {
 	 * @param int|null      $now    Current unix time override for tests.
 	 */
 	public function __construct( ?callable $source = null, ?int $now = null ) {
-		$this->source = $source ?? array( $this, 'read_keys' );
+		$this->source = \Closure::fromCallable( $source ?? array( $this, 'read_keys' ) );
 		$this->now    = $now ?? time();
 	}
 

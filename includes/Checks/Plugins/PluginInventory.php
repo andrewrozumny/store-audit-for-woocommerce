@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace StoreAudit\Checks\Plugins;
 
+use StoreAudit\Support\ActivePlugins;
 use StoreAudit\Support\Arr;
 use StoreAudit\Support\NotCheckedException;
 
@@ -24,16 +25,16 @@ final class PluginInventory {
 	/**
 	 * Installed plugins keyed by file.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $installed;
+	private \Closure $installed;
 
 	/**
 	 * Active plugin files.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $active;
+	private \Closure $active;
 
 	/**
 	 * Constructor.
@@ -42,21 +43,15 @@ final class PluginInventory {
 	 * @param callable|null $active    Returns list of active plugin files.
 	 */
 	public function __construct( ?callable $installed = null, ?callable $active = null ) {
-		$this->installed = $installed ?? static function (): array {
+		$installed     ??= static function (): array {
 			if ( ! function_exists( 'get_plugins' ) ) {
 				throw new NotCheckedException( esc_html__( 'the WordPress plugin functions are not loaded.', 'store-audit-for-woocommerce' ) );
 			}
 			return get_plugins();
 		};
-		$this->active    = $active ?? static function (): array {
-			$files = Arr::to_string_list( get_option( 'active_plugins', array() ) );
-			if ( is_multisite() ) {
-				foreach ( array_keys( Arr::to_array( get_site_option( 'active_sitewide_plugins', array() ) ) ) as $sitewide ) {
-					$files[] = (string) $sitewide;
-				}
-			}
-			return array_values( array_unique( $files ) );
-		};
+		$this->installed = \Closure::fromCallable( $installed );
+		$active        ??= static fn(): array => ActivePlugins::files();
+		$this->active    = \Closure::fromCallable( $active );
 	}
 
 	/**

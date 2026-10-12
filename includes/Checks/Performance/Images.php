@@ -153,30 +153,6 @@ final class Images extends AbstractCheck {
 			return Result::info( __( 'There are no images in the media library to check.', 'store-audit-for-woocommerce' ) );
 		}
 
-		$optimizer = Arr::get_string( $d, 'optimizer' );
-		$modern    = array( 'image/webp', 'image/avif' );
-		$is_new    = static function ( array $image ) use ( $modern ): bool {
-			if ( in_array( $image['mime'] ?? '', $modern, true ) ) {
-				return true;
-			}
-			$meta = Arr::get_array( $image, 'meta' );
-			if ( array() !== array_intersect( $modern, array_keys( Arr::get_array( $meta, 'sources' ) ) ) ) {
-				return true;
-			}
-			foreach ( is_array( $meta['sizes'] ?? null ) ? $meta['sizes'] : array() as $size ) {
-				if ( ! is_array( $size ) ) {
-					continue;
-				}
-				if ( in_array( $size['mime-type'] ?? '', $modern, true ) ) {
-					return true;
-				}
-				if ( array() !== array_intersect( $modern, array_keys( Arr::get_array( $size, 'sources' ) ) ) ) {
-					return true;
-				}
-			}
-			return false;
-		};
-
 		$no_dims = 0;
 		$old     = 0;
 		foreach ( $images as $image ) {
@@ -184,11 +160,23 @@ final class Images extends AbstractCheck {
 			if ( Arr::get_int( $meta, 'width' ) <= 0 || Arr::get_int( $meta, 'height' ) <= 0 ) {
 				++$no_dims;
 			}
-			if ( ! $is_new( $image ) ) {
+			if ( ! self::has_modern_format( $image ) ) {
 				++$old;
 			}
 		}
 
+		return self::verdict( $total, $no_dims, $old, Arr::get_string( $d, 'optimizer' ) );
+	}
+
+	/**
+	 * Result from the counts.
+	 *
+	 * @param int    $total     Images sampled.
+	 * @param int    $no_dims   Images without saved dimensions.
+	 * @param int    $old       Images without a WebP or AVIF version.
+	 * @param string $optimizer Name of the image optimizer plugin that serves WebP or AVIF, or an empty string.
+	 */
+	private static function verdict( int $total, int $no_dims, int $old, string $optimizer ): Result {
 		$sample = sprintf(
 			/* translators: %d: number of images sampled. */
 			_n( 'Of the latest %d image', 'Of the latest %d images', $total, 'store-audit-for-woocommerce' ),
@@ -238,5 +226,33 @@ final class Images extends AbstractCheck {
 			return Result::info( $summary, $details );
 		}
 		return Result::ok( $summary, $details );
+	}
+
+	/**
+	 * Whether an image is WebP or AVIF itself, or has a WebP or AVIF version (its own or in a size).
+	 *
+	 * @param array<string,mixed> $image One sampled image: its mime type and attachment metadata.
+	 */
+	private static function has_modern_format( array $image ): bool {
+		$modern = array( 'image/webp', 'image/avif' );
+		if ( in_array( $image['mime'] ?? '', $modern, true ) ) {
+			return true;
+		}
+		$meta = Arr::get_array( $image, 'meta' );
+		if ( array() !== array_intersect( $modern, array_keys( Arr::get_array( $meta, 'sources' ) ) ) ) {
+			return true;
+		}
+		foreach ( is_array( $meta['sizes'] ?? null ) ? $meta['sizes'] : array() as $size ) {
+			if ( ! is_array( $size ) ) {
+				continue;
+			}
+			if ( in_array( $size['mime-type'] ?? '', $modern, true ) ) {
+				return true;
+			}
+			if ( array() !== array_intersect( $modern, array_keys( Arr::get_array( $size, 'sources' ) ) ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

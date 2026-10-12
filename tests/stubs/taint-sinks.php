@@ -7,6 +7,8 @@
  * @package StoreAudit
  */
 
+declare(strict_types=1);
+
 // phpcs:ignoreFile -- Static analysis stub, not runtime code.
 
 /**

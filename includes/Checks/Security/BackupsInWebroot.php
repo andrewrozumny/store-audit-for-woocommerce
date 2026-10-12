@@ -79,9 +79,9 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 	/**
 	 * Media library lookup: receives paths such as "2024/05/file.zip", returns those that are attachments.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $attached;
+	private \Closure $attached;
 
 	/**
 	 * Entry budget.
@@ -93,9 +93,9 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 	/**
 	 * Clock returning seconds with decimals.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $clock;
+	private \Closure $clock;
 
 	/**
 	 * Constructor.
@@ -111,9 +111,9 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 		$this->root        = $root;
 		$this->uploads     = $uploads;
 		$this->content     = $content;
-		$this->attached    = $attached ?? array( $this, 'read_attachments' );
+		$this->attached    = \Closure::fromCallable( $attached ?? array( $this, 'read_attachments' ) );
 		$this->max_entries = $max_entries ?? self::MAX_ENTRIES;
-		$this->clock       = $clock ?? static fn(): float => microtime( true );
+		$this->clock       = \Closure::fromCallable( $clock ?? static fn(): float => microtime( true ) );
 	}
 
 	/**
@@ -148,6 +148,39 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 	 * Run.
 	 */
 	public function run(): Result {
+		$walk  = $this->walk();
+		$found = $this->without_media( $walk->found() );
+
+		$lines    = array();
+		$has_dump = false;
+		foreach ( $found as $name => $size ) {
+			$lines[] = $name . ' (' . $this->format_bytes( $size ) . ')';
+			if ( str_contains( strtolower( $name ), '.sql' ) ) {
+				$has_dump = true;
+			}
+		}
+		$notes = array();
+		if ( $walk->partial() ) {
+			$notes[] = __( 'Partially scanned: the folders are large, so only the first part was looked at.', 'store-audit-for-woocommerce' );
+		}
+
+		if ( array() === $found ) {
+			return self::nothing_found( $walk->unreadable(), $notes );
+		}
+
+		$summary = sprintf(
+			/* translators: %d: number of files. */
+			_n( '%d backup or dump file sits in a public folder.', '%d backup or dump files sit in public folders.', count( $found ), 'store-audit-for-woocommerce' ),
+			count( $found )
+		);
+		$details = array_merge( $this->cap_list( $lines ), $notes );
+		return $has_dump ? Result::critical( $summary, $details ) : Result::warning( $summary, $details );
+	}
+
+	/**
+	 * Walk the site root, wp-content, the backup plugin folders and uploads, within the entry and time limits.
+	 */
+	private function walk(): BackupWalk {
 		$root = $this->root;
 		if ( null === $root ) {
 			$root = Arr::to_string( ABSPATH );
@@ -168,52 +201,36 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 		if ( '' !== $uploads ) {
 			$walk->deep( $uploads, 'uploads/', array( self::PROTECTED_UPLOADS ) );
 		}
+		return $walk;
+	}
 
-		$found = $this->without_media( $walk->found() );
-
-		$lines    = array();
-		$has_dump = false;
-		foreach ( $found as $name => $size ) {
-			$lines[] = $name . ' (' . $this->format_bytes( $size ) . ')';
-			if ( str_contains( strtolower( $name ), '.sql' ) ) {
-				$has_dump = true;
-			}
-		}
-		$notes = array();
-		if ( $walk->partial() ) {
-			$notes[] = __( 'Partially scanned: the folders are large, so only the first part was looked at.', 'store-audit-for-woocommerce' );
-		}
-
-		if ( array() === $found ) {
-			if ( array() !== $walk->unreadable() ) {
-				return Result::info(
-					__( 'Some folders could not be read, so backup files in them could not be looked for.', 'store-audit-for-woocommerce' ),
-					array_merge(
-						array_map(
-							static fn( string $label ): string => sprintf(
-								/* translators: %s: folder name. */
-								__( 'Could not read: %s', 'store-audit-for-woocommerce' ),
-								'' === $label ? '/' : $label
-							),
-							$walk->unreadable()
+	/**
+	 * Result when no backup file was found: not-readable folders and partial scans lower it to info.
+	 *
+	 * @param string[] $unreadable Folders that could not be read.
+	 * @param string[] $notes      Notes about the scan.
+	 */
+	private static function nothing_found( array $unreadable, array $notes ): Result {
+		if ( array() !== $unreadable ) {
+			return Result::info(
+				__( 'Some folders could not be read, so backup files in them could not be looked for.', 'store-audit-for-woocommerce' ),
+				array_merge(
+					array_map(
+						static fn( string $label ): string => sprintf(
+							/* translators: %s: folder name. */
+							__( 'Could not read: %s', 'store-audit-for-woocommerce' ),
+							'' === $label ? '/' : $label
 						),
-						$notes
-					)
-				);
-			}
-			if ( array() !== $notes ) {
-				return Result::info( __( 'No backup or database dump files found in the part that was scanned.', 'store-audit-for-woocommerce' ), $notes );
-			}
-			return Result::ok( __( 'No backup or database dump files found in the site root, wp-content or uploads.', 'store-audit-for-woocommerce' ) );
+						$unreadable
+					),
+					$notes
+				)
+			);
 		}
-
-		$summary = sprintf(
-			/* translators: %d: number of files. */
-			_n( '%d backup or dump file sits in a public folder.', '%d backup or dump files sit in public folders.', count( $found ), 'store-audit-for-woocommerce' ),
-			count( $found )
-		);
-		$details = array_merge( $this->cap_list( $lines ), $notes );
-		return $has_dump ? Result::critical( $summary, $details ) : Result::warning( $summary, $details );
+		if ( array() !== $notes ) {
+			return Result::info( __( 'No backup or database dump files found in the part that was scanned.', 'store-audit-for-woocommerce' ), $notes );
+		}
+		return Result::ok( __( 'No backup or database dump files found in the site root, wp-content or uploads.', 'store-audit-for-woocommerce' ) );
 	}
 
 	/**

@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace StoreAudit\Admin;
 
 use StoreAudit\Report;
+use StoreAudit\ReportStore;
+use StoreAudit\ReportView;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
 
@@ -83,7 +85,7 @@ final class DashboardWidget {
 				$rows[] = $row;
 			}
 		}
-		return array_slice( Report::sort_issues( $rows ), 0, max( 0, $limit ) );
+		return array_slice( ReportView::sort_issues( $rows ), 0, max( 0, $limit ) );
 	}
 
 	/**
@@ -94,7 +96,7 @@ final class DashboardWidget {
 			return;
 		}
 		$page   = admin_url( 'admin.php?page=' . Page::SLUG );
-		$report = Report::get_last();
+		$report = ReportStore::get_last();
 
 		if ( null === $report ) {
 			echo '<p>' . esc_html__( 'The store has not been audited yet. One click checks security, settings, performance and environment.', 'store-audit-for-woocommerce' ) . '</p>';
@@ -107,7 +109,7 @@ final class DashboardWidget {
 		$note       = Report::incomplete_note( $score_data );
 		$top        = self::top_problems( Arr::get_array( $report, 'results' ) );
 
-		echo '<div class="sa-widget-score"><span class="sa-widget-number ' . esc_attr( Exports::score_class( $score ) ) . '">' . esc_html( (string) $score ) . '</span>';
+		echo '<div class="sa-widget-score"><span class="sa-widget-number ' . esc_attr( PrintView::score_class( $score ) ) . '">' . esc_html( (string) $score ) . '</span>';
 		echo '<span>' . esc_html__( 'out of 100', 'store-audit-for-woocommerce' ) . '</span></div>';
 		if ( '' !== $note ) {
 			echo '<p class="sa-widget-note">' . esc_html( $note ) . '</p>';

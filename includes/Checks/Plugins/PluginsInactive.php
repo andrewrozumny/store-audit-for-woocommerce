@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\DetailList;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -44,9 +45,9 @@ final class PluginsInactive extends AbstractCheck {
 	 * Network reader: null on a single site, else array{too_large:bool,active:list<string>} with the plugins active
 	 * on any site of the network.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $network;
+	private \Closure $network;
 
 	/**
 	 * Constructor.
@@ -56,7 +57,7 @@ final class PluginsInactive extends AbstractCheck {
 	 */
 	public function __construct( ?PluginInventory $inventory = null, ?callable $network = null ) {
 		$this->inventory = $inventory ?? new PluginInventory();
-		$this->network   = $network ?? array( $this, 'read_network' );
+		$this->network   = \Closure::fromCallable( $network ?? array( $this, 'read_network' ) );
 	}
 
 	/**

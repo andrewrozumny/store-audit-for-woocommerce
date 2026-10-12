@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\DetailList;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -26,9 +27,9 @@ final class PluginsUpdates extends AbstractCheck {
 	/**
 	 * Returns array{plugins:array<string,array{name:string,current:string,new:string}>,themes:array<string,array{name:string,current:string,new:string}>}.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Constructor.
@@ -36,7 +37,7 @@ final class PluginsUpdates extends AbstractCheck {
 	 * @param callable|null $source Data source override for tests.
 	 */
 	public function __construct( ?callable $source = null ) {
-		$this->source = $source ?? array( $this, 'read_updates' );
+		$this->source = \Closure::fromCallable( $source ?? array( $this, 'read_updates' ) );
 	}
 
 	/**
@@ -108,38 +109,44 @@ final class PluginsUpdates extends AbstractCheck {
 			return Result::ok( __( 'All plugins and themes are up to date.', 'store-audit-for-woocommerce' ) );
 		}
 
-		$plugin_count = count( $plugins );
-		$theme_count  = count( $themes );
+		return Result::warning( self::summary( count( $plugins ), count( $themes ) ), DetailList::cap( $lines ) );
+	}
+
+	/**
+	 * Summary sentence for the waiting updates.
+	 *
+	 * @param int $plugin_count Plugin updates waiting.
+	 * @param int $theme_count  Theme updates waiting.
+	 */
+	private static function summary( int $plugin_count, int $theme_count ): string {
 		if ( 0 === $theme_count ) {
-			$summary = sprintf(
+			return sprintf(
 				/* translators: %d: number of plugin updates. */
 				_n( '%d plugin update is waiting.', '%d plugin updates are waiting.', $plugin_count, 'store-audit-for-woocommerce' ),
 				$plugin_count
 			);
-		} elseif ( 0 === $plugin_count ) {
-			$summary = sprintf(
+		}
+		if ( 0 === $plugin_count ) {
+			return sprintf(
 				/* translators: %d: number of theme updates. */
 				_n( '%d theme update is waiting.', '%d theme updates are waiting.', $theme_count, 'store-audit-for-woocommerce' ),
 				$theme_count
 			);
-		} else {
-			$summary = sprintf(
-				/* translators: 1: plugin updates, for example "2 plugin updates", 2: theme updates, for example "1 theme update". */
-				__( '%1$s and %2$s are waiting.', 'store-audit-for-woocommerce' ),
-				sprintf(
-					/* translators: %d: number of plugin updates. */
-					_n( '%d plugin update', '%d plugin updates', $plugin_count, 'store-audit-for-woocommerce' ),
-					$plugin_count
-				),
-				sprintf(
-					/* translators: %d: number of theme updates. */
-					_n( '%d theme update', '%d theme updates', $theme_count, 'store-audit-for-woocommerce' ),
-					$theme_count
-				)
-			);
 		}
-
-		return Result::warning( $summary, DetailList::cap( $lines ) );
+		return sprintf(
+			/* translators: 1: plugin updates, for example "2 plugin updates", 2: theme updates, for example "1 theme update". */
+			__( '%1$s and %2$s are waiting.', 'store-audit-for-woocommerce' ),
+			sprintf(
+				/* translators: %d: number of plugin updates. */
+				_n( '%d plugin update', '%d plugin updates', $plugin_count, 'store-audit-for-woocommerce' ),
+				$plugin_count
+			),
+			sprintf(
+				/* translators: %d: number of theme updates. */
+				_n( '%d theme update', '%d theme updates', $theme_count, 'store-audit-for-woocommerce' ),
+				$theme_count
+			)
+		);
 	}
 
 	/**

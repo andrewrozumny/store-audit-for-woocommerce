@@ -14,10 +14,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Immutable result of a single check.
+ * Immutable result of a single check. Build one with a named constructor: critical(), warning(), info(), ok() or error().
  */
 final class Result {
 
+	// Severities. ERROR means "could not be checked" and is not a finding about the store.
 	public const CRITICAL = 'critical';
 	public const WARNING  = 'warning';
 	public const INFO     = 'info';
@@ -43,7 +44,7 @@ final class Result {
 	/**
 	 * All valid severities.
 	 *
-	 * @return list<string>
+	 * @return list<string> The severity constants.
 	 */
 	public static function severities(): array {
 		return array( self::CRITICAL, self::WARNING, self::INFO, self::OK, self::ERROR );
@@ -55,6 +56,7 @@ final class Result {
 	 * @param string   $summary  Summary.
 	 * @param string[] $details  Details.
 	 * @param string   $fix_hint Fix hint override.
+	 * @return self The critical finding.
 	 */
 	public static function critical( string $summary, array $details = array(), string $fix_hint = '' ): self {
 		return new self( self::CRITICAL, $summary, $details, $fix_hint );
@@ -66,6 +68,7 @@ final class Result {
 	 * @param string   $summary  Summary.
 	 * @param string[] $details  Details.
 	 * @param string   $fix_hint Fix hint override.
+	 * @return self The warning finding.
 	 */
 	public static function warning( string $summary, array $details = array(), string $fix_hint = '' ): self {
 		return new self( self::WARNING, $summary, $details, $fix_hint );
@@ -77,6 +80,7 @@ final class Result {
 	 * @param string   $summary  Summary.
 	 * @param string[] $details  Details.
 	 * @param string   $fix_hint Fix hint override.
+	 * @return self The informational finding.
 	 */
 	public static function info( string $summary, array $details = array(), string $fix_hint = '' ): self {
 		return new self( self::INFO, $summary, $details, $fix_hint );
@@ -87,6 +91,7 @@ final class Result {
 	 *
 	 * @param string   $summary Summary.
 	 * @param string[] $details Details.
+	 * @return self The "all fine" result.
 	 */
 	public static function ok( string $summary, array $details = array() ): self {
 		return new self( self::OK, $summary, $details );
@@ -97,6 +102,7 @@ final class Result {
 	 *
 	 * @param string   $summary Summary.
 	 * @param string[] $details Details.
+	 * @return self The "could not be checked" result.
 	 */
 	public static function error( string $summary, array $details = array() ): self {
 		return new self( self::ERROR, $summary, $details );
@@ -104,6 +110,8 @@ final class Result {
 
 	/**
 	 * Severity.
+	 *
+	 * @return string One of the severity constants.
 	 */
 	public function severity(): string {
 		return $this->severity;
@@ -111,6 +119,8 @@ final class Result {
 
 	/**
 	 * Summary.
+	 *
+	 * @return string The concrete finding, in store-owner language.
 	 */
 	public function summary(): string {
 		return $this->summary;
@@ -119,7 +129,7 @@ final class Result {
 	/**
 	 * Details.
 	 *
-	 * @return list<string>
+	 * @return list<string> Extra lines, such as plugin names.
 	 */
 	public function details(): array {
 		return array_values( $this->details );
@@ -127,6 +137,8 @@ final class Result {
 
 	/**
 	 * Fix hint override (empty when none).
+	 *
+	 * @return string The override, or an empty string when the check's own hint applies.
 	 */
 	public function fix_hint(): string {
 		return $this->fix_hint;

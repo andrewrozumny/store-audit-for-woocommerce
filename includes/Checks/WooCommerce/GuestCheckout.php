@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 
@@ -26,9 +25,9 @@ final class GuestCheckout extends AbstractCheck {
 	/**
 	 * Option reader: receives an option name, returns its value.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $option;
+	private \Closure $option;
 
 	/**
 	 * Constructor.
@@ -36,7 +35,7 @@ final class GuestCheckout extends AbstractCheck {
 	 * @param callable|null $option Option reader override for tests.
 	 */
 	public function __construct( ?callable $option = null ) {
-		$this->option = $option ?? static fn( string $name ) => get_option( $name, 'no' );
+		$this->option = \Closure::fromCallable( $option ?? static fn( string $name ) => get_option( $name, 'no' ) );
 	}
 
 	/**

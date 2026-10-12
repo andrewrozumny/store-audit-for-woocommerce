@@ -26,9 +26,9 @@ final class SelfProbe {
 	/**
 	 * Transport: (method, url, args) returning a wp_remote_request style array or WP_Error.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $transport;
+	private \Closure $transport;
 
 	/**
 	 * Constructor.
@@ -36,7 +36,7 @@ final class SelfProbe {
 	 * @param callable|null $transport Transport override for tests.
 	 */
 	public function __construct( ?callable $transport = null ) {
-		$this->transport = $transport ?? static function ( string $method, string $url, array $args ) {
+		$transport     ??= static function ( string $method, string $url, array $args ) {
 			$request = array(
 				'method'      => $method,
 				'timeout'     => Arr::get_float( $args, 'timeout', 5.0 ),
@@ -59,6 +59,7 @@ final class SelfProbe {
 			}
 			return wp_remote_request( $url, $request );
 		};
+		$this->transport = \Closure::fromCallable( $transport );
 	}
 
 	/**

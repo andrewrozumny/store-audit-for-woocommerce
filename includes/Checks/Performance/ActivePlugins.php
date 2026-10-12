@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\ActivePlugins as SiteActivePlugins;
 use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -87,11 +88,9 @@ final class ActivePlugins extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		$active  = get_option( 'active_plugins', array() );
-		$network = is_multisite() ? get_site_option( 'active_sitewide_plugins', array() ) : array();
 		return array(
-			'active'  => is_array( $active ) ? count( $active ) : 0,
-			'network' => is_array( $network ) ? count( $network ) : 0,
+			'active'  => count( SiteActivePlugins::site_files() ),
+			'network' => count( SiteActivePlugins::network_files() ),
 		);
 	}
 

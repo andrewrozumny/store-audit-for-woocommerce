@@ -60,16 +60,16 @@ final class Cli {
 		$report  = Report::build( $results );
 
 		if ( isset( $assoc_args['save'] ) ) {
-			Report::store_last( $report );
+			ReportStore::store_last( $report );
 		}
 
 		if ( 'json' === $format ) {
-			\WP_CLI::line( Report::to_json( $report, false ) );
+			\WP_CLI::line( JsonFormatter::format( $report, false ) );
 			return;
 		}
 
 		if ( 'markdown' === $format ) {
-			\WP_CLI::line( rtrim( Report::to_markdown( $report, false ) ) );
+			\WP_CLI::line( rtrim( MarkdownFormatter::format( $report, false ) ) );
 			return;
 		}
 

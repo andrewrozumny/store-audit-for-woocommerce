@@ -56,9 +56,9 @@ final class BackupWalk {
 	/**
 	 * Clock returning seconds with decimals.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $clock;
+	private \Closure $clock;
 
 	/**
 	 * Time after which the walk stops.
@@ -76,7 +76,7 @@ final class BackupWalk {
 	 */
 	public function __construct( int $max_entries, float $max_seconds, callable $clock ) {
 		$this->left     = $max_entries;
-		$this->clock    = $clock;
+		$this->clock    = \Closure::fromCallable( $clock );
 		$this->deadline = Arr::to_float( call_user_func( $clock ) ) + $max_seconds;
 	}
 

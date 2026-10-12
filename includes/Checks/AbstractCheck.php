@@ -21,6 +21,8 @@ abstract class AbstractCheck implements CheckInterface {
 	/**
 	 * Whether the details of this check name accounts, files or keys that must not leave the site in an export
 	 * (printed report, Markdown, JSON). The full details stay on the Store Audit screen and in WP-CLI.
+	 *
+	 * @return bool True when the details are sensitive. Default false.
 	 */
 	public function is_sensitive(): bool {
 		return false;
@@ -30,6 +32,7 @@ abstract class AbstractCheck implements CheckInterface {
 	 * Human readable byte size.
 	 *
 	 * @param int $bytes Bytes.
+	 * @return string Size such as "1.5 MB".
 	 */
 	protected function format_bytes( int $bytes ): string {
 		$formatted = size_format( $bytes, 1 );
@@ -38,6 +41,8 @@ abstract class AbstractCheck implements CheckInterface {
 
 	/**
 	 * Whether the site declares itself a production environment.
+	 *
+	 * @return bool True when wp_get_environment_type() is "production".
 	 */
 	protected function is_production(): bool {
 		return 'production' === wp_get_environment_type();

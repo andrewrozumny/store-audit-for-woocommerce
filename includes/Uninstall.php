@@ -26,7 +26,7 @@ final class Uninstall {
 	 * @var list<string>
 	 */
 	private const OPTIONS = array(
-		Report::OPTION,
+		ReportStore::OPTION,
 		Ajax::RUN_OPTION,
 	);
 

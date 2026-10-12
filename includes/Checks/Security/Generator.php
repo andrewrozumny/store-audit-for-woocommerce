@@ -24,9 +24,9 @@ final class Generator extends AbstractProbeCheck {
 	/**
 	 * Latest WordPress version provider (tests).
 	 *
-	 * @var callable|null
+	 * @var \Closure|null
 	 */
-	private $latest;
+	private ?\Closure $latest;
 
 	/**
 	 * Constructor.
@@ -36,7 +36,7 @@ final class Generator extends AbstractProbeCheck {
 	 */
 	public function __construct( ?SelfProbe $probe = null, ?callable $latest = null ) {
 		parent::__construct( $probe );
-		$this->latest = $latest;
+		$this->latest = null === $latest ? null : \Closure::fromCallable( $latest );
 	}
 
 	/**
@@ -88,6 +88,12 @@ final class Generator extends AbstractProbeCheck {
 				sprintf( __( 'The page source shows WordPress %1$s, and %2$s is available.', 'store-audit-for-woocommerce' ), $exposed, $latest )
 			);
 		}
+		if ( ! is_string( $latest ) || '' === $latest ) {
+			return Result::info(
+				/* translators: %s: version number. */
+				sprintf( __( 'The page source shows the WordPress version (%s). Whether it is the latest could not be checked, because WordPress has no update data yet. Hiding it costs nothing.', 'store-audit-for-woocommerce' ), $exposed )
+			);
+		}
 		return Result::info(
 			/* translators: %s: version number. */
 			sprintf( __( 'The page source shows the WordPress version (%s). It is up to date, but hiding it costs nothing.', 'store-audit-for-woocommerce' ), $exposed )
@@ -95,7 +101,7 @@ final class Generator extends AbstractProbeCheck {
 	}
 
 	/**
-	 * Latest version according to the cached core update data (no network call).
+	 * Latest version according to the cached core update data (no network call), or null when there is no update data.
 	 */
 	private function default_latest(): ?string {
 		$updates = get_site_transient( 'update_core' );
@@ -105,6 +111,8 @@ final class Generator extends AbstractProbeCheck {
 					return Arr::to_string( $update->current );
 				}
 			}
+			// Update data exists and offers no upgrade: the installed version is the latest.
+			return get_bloginfo( 'version' );
 		}
 		return null;
 	}

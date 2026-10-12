@@ -171,7 +171,7 @@ final class Ajax {
 		$ran     = 0;
 		foreach ( Registry::all() as $check_id => $check ) {
 			$stored = get_option( $this->result_option( $check_id ), null );
-			$row    = is_array( $stored ) && Arr::get_string( $stored, 'run_id' ) === $request['run_id'] ? Report::normalize_row( $stored['result'] ?? null ) : null;
+			$row    = is_array( $stored ) && Arr::get_string( $stored, 'run_id' ) === $request['run_id'] ? ReportStore::normalize_row( $stored['result'] ?? null ) : null;
 			if ( null === $row ) {
 				$results[] = $runner->not_run( $check );
 				continue;
@@ -184,7 +184,7 @@ final class Ajax {
 		}
 
 		$report = Report::build( $results );
-		Report::store_last( $report );
+		ReportStore::store_last( $report );
 		$this->clear_results();
 		delete_option( self::RUN_OPTION );
 
@@ -198,10 +198,10 @@ final class Ajax {
 	public function markdown(): void {
 		$this->authorized_request();
 
-		$report = Report::get_last();
+		$report = ReportStore::get_last();
 		if ( null === $report ) {
 			wp_send_json_error( array( 'message' => __( 'There is no audit report yet. Run the audit first.', 'store-audit-for-woocommerce' ) ), 404 );
 		}
-		wp_send_json_success( array( 'markdown' => Report::to_markdown( $report ) ) );
+		wp_send_json_success( array( 'markdown' => MarkdownFormatter::format( $report ) ) );
 	}
 }

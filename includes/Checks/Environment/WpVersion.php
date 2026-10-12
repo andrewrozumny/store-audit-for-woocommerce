@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\VersionBranch;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -127,12 +128,7 @@ final class WpVersion extends AbstractCheck {
 			);
 		}
 
-		$branch = static function ( string $version ): string {
-			$parts = explode( '.', $version );
-			return $parts[0] . '.' . ( $parts[1] ?? '0' );
-		};
-
-		if ( $branch( $current ) !== $branch( $latest ) ) {
+		if ( VersionBranch::of( $current ) !== VersionBranch::of( $latest ) ) {
 			return Result::warning(
 				/* translators: 1: installed WordPress version, 2: latest version. */
 				sprintf( __( 'WordPress %1$s is installed, a newer major release (%2$s) is available.', 'store-audit-for-woocommerce' ), $current, $latest )

@@ -108,6 +108,7 @@ final class PhpVersion extends AbstractCheck {
 		}
 		$branch = $m[1] . '.' . $m[2];
 
+		// Defensive: the plugin header blocks these versions, so this branch is not reached on a normal install.
 		if ( version_compare( $branch, '8.0', '<' ) ) {
 			return Result::critical(
 				/* translators: %s: PHP branch, e.g. 7.4. */

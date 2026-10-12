@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
+use StoreAudit\Support\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
@@ -28,9 +28,9 @@ final class Webhooks extends AbstractCheck {
 	/**
 	 * Returns list<array{name:string,status:string,failures:int}> of problem webhooks only.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Constructor.
@@ -38,7 +38,7 @@ final class Webhooks extends AbstractCheck {
 	 * @param callable|null $source Data source override for tests.
 	 */
 	public function __construct( ?callable $source = null ) {
-		$this->source = $source ?? array( $this, 'read_webhooks' );
+		$this->source = \Closure::fromCallable( $source ?? array( $this, 'read_webhooks' ) );
 	}
 
 	/**

@@ -89,6 +89,22 @@ final class PageTest extends TestCase {
 	}
 
 	/**
+	 * The script sorts by the severity order PHP defines, so the order is not written down twice.
+	 */
+	public function test_config_carries_the_severity_order_from_php(): void {
+		$page = new Page();
+		$page->add_menu();
+		$page->enqueue( 'woocommerce_page_store-audit' );
+
+		$json = preg_replace( '/^window\.storeAuditConfig = (.*);$/s', '$1', $this->inline );
+		$this->assertIsString( $json );
+		$config = json_decode( $json, true );
+		$this->assertIsArray( $config );
+		$this->assertSame( array( 'critical', 'warning', 'error', 'info', 'ok' ), $config['severities'] );
+		$this->assertSame( \StoreAudit\ReportView::severity_order(), $config['severities'] );
+	}
+
+	/**
 	 * The menu item stays under WooCommerce but needs manage_options.
 	 */
 	public function test_menu_needs_manage_options(): void {

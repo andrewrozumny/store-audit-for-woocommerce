@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
@@ -27,9 +26,9 @@ final class Hpos extends AbstractCheck {
 	/**
 	 * Returns array{hpos:bool,sync:bool}.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Constructor.
@@ -37,7 +36,7 @@ final class Hpos extends AbstractCheck {
 	 * @param callable|null $source Data source override for tests.
 	 */
 	public function __construct( ?callable $source = null ) {
-		$this->source = $source ?? static function (): array {
+		$source     ??= static function (): array {
 			$hpos = class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' )
 				&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
 			return array(
@@ -45,6 +44,7 @@ final class Hpos extends AbstractCheck {
 				'sync' => 'yes' === get_option( 'woocommerce_custom_orders_table_data_sync_enabled', 'no' ),
 			);
 		};
+		$this->source = \Closure::fromCallable( $source );
 	}
 
 	/**

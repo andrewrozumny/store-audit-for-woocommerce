@@ -41,6 +41,17 @@ final class GeneratorTest extends ProbeTestCase {
 	}
 
 	/**
+	 * Without update data the report must not claim the version is current.
+	 */
+	public function test_unknown_latest_does_not_claim_up_to_date(): void {
+		$check  = new Generator( $this->probe( array( '/' => array( 200, self::PAGE ) ) ), static fn () => null );
+		$result = $check->run();
+		$this->assertSame( 'info', $result->severity() );
+		$this->assertStringNotContainsString( 'up to date', $result->summary() );
+		$this->assertStringContainsString( 'could not be checked', $result->summary() );
+	}
+
+	/**
 	 * No tag is ok.
 	 */
 	public function test_no_tag_is_ok(): void {

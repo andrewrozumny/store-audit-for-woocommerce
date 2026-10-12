@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\DetailList;
 use StoreAudit\Support\NotCheckedException;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -33,9 +34,9 @@ final class PluginsMu extends AbstractCheck {
 	/**
 	 * Entries: array<string,array{name:string,mtime:int}> keyed by file name.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Current unix time.
@@ -51,7 +52,7 @@ final class PluginsMu extends AbstractCheck {
 	 * @param int|null      $now    Current unix time override for tests.
 	 */
 	public function __construct( ?callable $source = null, ?int $now = null ) {
-		$this->source = $source ?? array( $this, 'read_mu_plugins' );
+		$this->source = \Closure::fromCallable( $source ?? array( $this, 'read_mu_plugins' ) );
 		$this->now    = $now ?? time();
 	}
 
@@ -116,24 +117,10 @@ final class PluginsMu extends AbstractCheck {
 				);
 				continue;
 			}
-			$mtime = Arr::get_int( $item, 'mtime' );
-			if ( $mtime > 0 && $mtime < $cutoff ) {
-				++$old;
-				$lines[] = sprintf(
-					/* translators: 1: plugin name, 2: file name, 3: date. */
-					__( '%1$s (%2$s): file last changed %3$s, old must-use plugin, check if still needed', 'store-audit-for-woocommerce' ),
-					$name,
-					$file,
-					gmdate( 'j M Y', $mtime )
-				);
-			} else {
-				$lines[] = sprintf(
-					/* translators: 1: plugin name, 2: file name. */
-					__( '%1$s (%2$s)', 'store-audit-for-woocommerce' ),
-					$name,
-					$file
-				);
-			}
+			$mtime   = Arr::get_int( $item, 'mtime' );
+			$is_old  = $mtime > 0 && $mtime < $cutoff;
+			$old    += $is_old ? 1 : 0;
+			$lines[] = self::entry_line( $name, (string) $file, $is_old ? $mtime : 0 );
 		}
 
 		if ( array() === $lines ) {
@@ -159,6 +146,31 @@ final class PluginsMu extends AbstractCheck {
 				count( $items )
 			),
 			DetailList::cap( $lines )
+		);
+	}
+
+	/**
+	 * Detail line for one must-use plugin; an old one carries the date its file last changed.
+	 *
+	 * @param string $name  Plugin name.
+	 * @param string $file  File name.
+	 * @param int    $mtime File modification time when the plugin counts as old, else 0.
+	 */
+	private static function entry_line( string $name, string $file, int $mtime ): string {
+		if ( $mtime > 0 ) {
+			return sprintf(
+				/* translators: 1: plugin name, 2: file name, 3: date. */
+				__( '%1$s (%2$s): file last changed %3$s, old must-use plugin, check if still needed', 'store-audit-for-woocommerce' ),
+				$name,
+				$file,
+				gmdate( 'j M Y', $mtime )
+			);
+		}
+		return sprintf(
+			/* translators: 1: plugin name, 2: file name. */
+			__( '%1$s (%2$s)', 'store-audit-for-woocommerce' ),
+			$name,
+			$file
 		);
 	}
 

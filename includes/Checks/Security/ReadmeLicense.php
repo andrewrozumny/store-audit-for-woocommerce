@@ -30,9 +30,9 @@ final class ReadmeLicense extends AbstractProbeCheck {
 	/**
 	 * Existence test.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $exists;
+	private \Closure $exists;
 
 	/**
 	 * Constructor.
@@ -44,7 +44,7 @@ final class ReadmeLicense extends AbstractProbeCheck {
 	public function __construct( ?SelfProbe $probe = null, ?string $root = null, ?callable $exists = null ) {
 		parent::__construct( $probe );
 		$this->root   = $root ?? (string) ABSPATH;
-		$this->exists = $exists ?? 'file_exists';
+		$this->exists = \Closure::fromCallable( $exists ?? 'file_exists' );
 	}
 
 	/**

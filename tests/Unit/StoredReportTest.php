@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace StoreAudit\Tests\Unit;
 
-use Brain\Monkey\Functions;
 use StoreAudit\Report;
 use StoreAudit\Result;
 

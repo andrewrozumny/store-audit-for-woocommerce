@@ -12,9 +12,8 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
-use Automattic\WooCommerce\Utilities\OrderUtil;
 use StoreAudit\Support\Arr;
-use StoreAudit\Support\Db;
+use StoreAudit\Support\OrderStats;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -92,21 +91,12 @@ final class OrdersStorage extends AbstractCheck {
 		if ( ! function_exists( 'WC' ) ) {
 			return array( 'wc' => false );
 		}
-		$hpos = class_exists( OrderUtil::class ) && OrderUtil::custom_orders_table_usage_is_enabled();
-		$db   = Db::wpdb();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
-		if ( $hpos ) {
-			Db::require_table( $db->prefix . 'wc_orders' );
-			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE type = 'shop_order'", $db->prefix . 'wc_orders' ) ) );
-		} else {
-			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'shop_order'", $db->posts ) ) );
-		}
-		// phpcs:enable
+		$hpos = OrderStats::uses_hpos();
 
 		return array(
 			'wc'     => true,
 			'hpos'   => $hpos,
-			'orders' => $orders,
+			'orders' => OrderStats::count( $hpos ),
 		);
 	}
 

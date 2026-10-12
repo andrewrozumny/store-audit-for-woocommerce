@@ -5,7 +5,8 @@
 	var cfg = window.storeAuditConfig || {};
 	var S = cfg.strings || {};
 	var CHECK_TIMEOUT_MS = 45000;
-	var SEVERITY_ORDER = [ 'critical', 'warning', 'error', 'info', 'ok' ];
+	// Worst first, passed checks last. The order is defined in PHP (ReportView) and arrives in the page config.
+	var SEVERITY_ORDER = Array.isArray( cfg.severities ) ? cfg.severities : [];
 
 	var runBtn = document.getElementById( 'store-audit-run' );
 	var lastEl = document.getElementById( 'store-audit-last' );

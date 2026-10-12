@@ -35,23 +35,23 @@ final class WporgApi {
 	/**
 	 * HTTP fetcher: receives a URL, returns array{code:int,body:string} or null on failure.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $fetcher;
+	private \Closure $fetcher;
 
 	/**
 	 * Cache reader: receives a key, returns the cached array or false.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $cache_get;
+	private \Closure $cache_get;
 
 	/**
 	 * Cache writer: receives key, value, ttl.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $cache_set;
+	private \Closure $cache_set;
 
 	/**
 	 * Number of real HTTP requests made by this instance.
@@ -68,11 +68,12 @@ final class WporgApi {
 	 * @param callable|null $cache_set Cache writer override for tests.
 	 */
 	public function __construct( ?callable $fetcher = null, ?callable $cache_get = null, ?callable $cache_set = null ) {
-		$this->fetcher   = $fetcher ?? array( $this, 'http_fetch' );
-		$this->cache_get = $cache_get ?? static fn( string $key ) => get_transient( $key );
-		$this->cache_set = $cache_set ?? static function ( string $key, array $value, int $ttl ): void {
+		$this->fetcher   = \Closure::fromCallable( $fetcher ?? array( $this, 'http_fetch' ) );
+		$this->cache_get = \Closure::fromCallable( $cache_get ?? static fn( string $key ) => get_transient( $key ) );
+		$cache_set     ??= static function ( string $key, array $value, int $ttl ): void {
 			set_transient( $key, $value, $ttl );
 		};
+		$this->cache_set = \Closure::fromCallable( $cache_set );
 	}
 
 	/**

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\WooCommerce;
 
 use StoreAudit\Checks\AbstractCheck;
-use StoreAudit\Checks\Plugins\DetailList;
+use StoreAudit\Support\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
@@ -28,9 +28,9 @@ final class ShippingZones extends AbstractCheck {
 	/**
 	 * Returns array{enabled:bool,sells_shippable:bool,fallback:bool,zones:list<array{name:string,methods:int}>}.
 	 *
-	 * @var callable
+	 * @var \Closure
 	 */
-	private $source;
+	private \Closure $source;
 
 	/**
 	 * Constructor.
@@ -38,7 +38,7 @@ final class ShippingZones extends AbstractCheck {
 	 * @param callable|null $source Data source override for tests.
 	 */
 	public function __construct( ?callable $source = null ) {
-		$this->source = $source ?? array( $this, 'read_zones' );
+		$this->source = \Closure::fromCallable( $source ?? array( $this, 'read_zones' ) );
 	}
 
 	/**

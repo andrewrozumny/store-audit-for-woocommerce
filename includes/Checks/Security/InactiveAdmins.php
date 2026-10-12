@@ -96,7 +96,7 @@ final class InactiveAdmins extends AbstractSecurityCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$admins = null !== $this->admins ? (array) call_user_func( $this->admins ) : $this->default_administrators();
+		$admins = null !== $this->admins ? $this->normalise_admins( call_user_func( $this->admins ) ) : $this->default_administrators();
 
 		$inactive = array();
 		$unknown  = array();

@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -98,10 +99,10 @@ final class FileEditing extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		if ( ! empty( $d['file_edit'] ) ) {
+		if ( Arr::get_bool( $d, 'file_edit' ) ) {
 			return Result::ok( __( 'The built-in theme and plugin editor is switched off.', 'store-audit-for-woocommerce' ) );
 		}
-		if ( ! empty( $d['file_mods'] ) ) {
+		if ( Arr::get_bool( $d, 'file_mods' ) ) {
 			return Result::ok( __( 'File changes from the dashboard are switched off (DISALLOW_FILE_MODS), which also disables the editor.', 'store-audit-for-woocommerce' ) );
 		}
 		return Result::warning( __( 'The built-in theme and plugin editor is available to every administrator.', 'store-audit-for-woocommerce' ) );

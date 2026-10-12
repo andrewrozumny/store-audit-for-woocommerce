@@ -12,6 +12,8 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,11 +88,11 @@ final class CatalogSize extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
+		$db       = Db::wpdb();
 		$counts   = wp_count_posts( 'product' );
-		$products = isset( $counts->publish ) ? (int) $counts->publish : 0;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-		$variations = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'product_variation' AND post_status = 'publish'" );
+		$products = Arr::to_int( $counts->publish ?? null );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
+		$variations = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'product_variation' AND post_status = 'publish'", $db->posts ) ) );
 		// phpcs:enable
 
 		return array(
@@ -106,8 +108,8 @@ final class CatalogSize extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$products   = (int) ( $d['products'] ?? 0 );
-		$variations = (int) ( $d['variations'] ?? 0 );
+		$products   = Arr::get_int( $d, 'products' );
+		$variations = Arr::get_int( $d, 'variations' );
 		$summary    = sprintf(
 			/* translators: 1: products, for example "18 published products", 2: variations, for example "1 published variation". */
 			__( '%1$s and %2$s.', 'store-audit-for-woocommerce' ),
@@ -123,7 +125,7 @@ final class CatalogSize extends AbstractCheck {
 			)
 		);
 
-		if ( $variations > 10000 && empty( $d['ext'] ) ) {
+		if ( $variations > 10000 && ! Arr::get_bool( $d, 'ext' ) ) {
 			return Result::warning( $summary . ' ' . __( 'A catalog this size runs slowly without a persistent object cache.', 'store-audit-for-woocommerce' ) );
 		}
 		return Result::info( $summary );

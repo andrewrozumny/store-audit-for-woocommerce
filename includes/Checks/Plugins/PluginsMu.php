@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Plugins;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,7 +87,7 @@ final class PluginsMu extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$items = ( $this->source )();
+		$items = Arr::to_array( ( $this->source )() );
 		if ( array() === $items ) {
 			return Result::ok( __( 'No must-use plugins are installed.', 'store-audit-for-woocommerce' ) );
 		}
@@ -94,21 +95,24 @@ final class PluginsMu extends AbstractCheck {
 		$cutoff = strtotime( '-2 years', $this->now );
 		$lines  = array();
 		$old    = 0;
-		foreach ( $items as $file => $item ) {
-			if ( $item['mtime'] > 0 && $item['mtime'] < $cutoff ) {
+		foreach ( $items as $file => $raw_item ) {
+			$item  = Arr::to_string_keyed( $raw_item );
+			$name  = Arr::get_string( $item, 'name' );
+			$mtime = Arr::get_int( $item, 'mtime' );
+			if ( $mtime > 0 && $mtime < $cutoff ) {
 				++$old;
 				$lines[] = sprintf(
 					/* translators: 1: plugin name, 2: file name, 3: date. */
 					__( '%1$s (%2$s): file last changed %3$s, old must-use plugin, check if still needed', 'store-audit-for-woocommerce' ),
-					$item['name'],
+					$name,
 					$file,
-					gmdate( 'j M Y', $item['mtime'] )
+					gmdate( 'j M Y', $mtime )
 				);
 			} else {
 				$lines[] = sprintf(
 					/* translators: 1: plugin name, 2: file name. */
 					__( '%1$s (%2$s)', 'store-audit-for-woocommerce' ),
-					$item['name'],
+					$name,
 					$file
 				);
 			}
@@ -147,7 +151,7 @@ final class PluginsMu extends AbstractCheck {
 			throw new \RuntimeException( 'The WordPress plugin functions are not loaded.' );
 		}
 		$out = array();
-		$dir = defined( 'WPMU_PLUGIN_DIR' ) ? rtrim( (string) WPMU_PLUGIN_DIR, '/\\' ) : '';
+		$dir = defined( 'WPMU_PLUGIN_DIR' ) ? rtrim( WPMU_PLUGIN_DIR, '/\\' ) : '';
 
 		foreach ( get_mu_plugins() as $file => $data ) {
 			$name = isset( $data['Name'] ) && is_string( $data['Name'] ) && '' !== $data['Name'] ? $data['Name'] : (string) $file;

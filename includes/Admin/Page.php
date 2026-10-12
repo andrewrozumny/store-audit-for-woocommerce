@@ -12,6 +12,7 @@ namespace StoreAudit\Admin;
 use StoreAudit\Ajax;
 use StoreAudit\Checks\Section;
 use StoreAudit\Report;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -71,7 +72,7 @@ final class Page {
 
 		$last = Report::get_last();
 		if ( null !== $last ) {
-			$last['generated_at_local'] = Report::local_date( (string) ( $last['generated_at'] ?? '' ) );
+			$last['generated_at_local'] = Report::local_date( Arr::get_string( $last, 'generated_at' ) );
 		}
 
 		$config = array(

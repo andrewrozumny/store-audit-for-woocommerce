@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit;
 
 use StoreAudit\Checks\Section;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -40,8 +41,8 @@ final class Score {
 		$counts  = array();
 
 		foreach ( $results as $row ) {
-			$section  = isset( $row['section'] ) ? (string) $row['section'] : '';
-			$severity = isset( $row['severity'] ) ? (string) $row['severity'] : '';
+			$section  = Arr::get_string( $row, 'section' );
+			$severity = Arr::get_string( $row, 'severity' );
 			if ( ! isset( $weights[ $section ] ) || ! isset( self::PENALTY[ $severity ] ) ) {
 				continue;
 			}

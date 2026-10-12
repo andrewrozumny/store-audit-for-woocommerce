@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit;
 
 use StoreAudit\Checks\Section;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -34,23 +35,25 @@ final class Ajax {
 	}
 
 	/**
-	 * Nonce and capability gate. Sends an error response and exits when it fails.
+	 * Nonce and capability gate. Sends an error response and exits when it fails, and only then reads the request.
+	 * Posted values are accepted as plain strings only; an array (for example run_id[]=x) counts as empty.
+	 *
+	 * @return array{run_id:string,check_id:string}
 	 */
-	private function authorize(): void {
-		if ( ! check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
+	private function authorized_request(): array {
+		if ( false === check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Security check failed. Reload the page and try again.', 'store-audit-for-woocommerce' ) ), 403 );
 		}
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to run the audit.', 'store-audit-for-woocommerce' ) ), 403 );
 		}
-	}
 
-	/**
-	 * Posted run id, sanitized.
-	 */
-	private function posted_run_id(): string {
-		// Nonce is verified in authorize().
-		return isset( $_POST['run_id'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['run_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$run_id   = isset( $_POST['run_id'] ) && is_string( $_POST['run_id'] ) ? sanitize_text_field( wp_unslash( $_POST['run_id'] ) ) : '';
+		$check_id = isset( $_POST['check_id'] ) && is_string( $_POST['check_id'] ) ? sanitize_key( wp_unslash( $_POST['check_id'] ) ) : '';
+		return array(
+			'run_id'   => $run_id,
+			'check_id' => $check_id,
+		);
 	}
 
 	/**
@@ -61,20 +64,26 @@ final class Ajax {
 	 */
 	private function load_run( string $run_id ): ?array {
 		$run = get_option( self::RUN_OPTION, null );
-		if ( '' === $run_id || ! is_array( $run ) || ( $run['run_id'] ?? '' ) !== $run_id ) {
+		if ( '' === $run_id || ! is_array( $run ) || Arr::get_string( $run, 'run_id' ) !== $run_id ) {
 			return null;
 		}
-		if ( ! isset( $run['results'] ) || ! is_array( $run['results'] ) ) {
-			$run['results'] = array();
+		$results = array();
+		foreach ( Arr::get_array( $run, 'results' ) as $id => $row ) {
+			if ( is_string( $id ) ) {
+				$results[ $id ] = Arr::to_string_keyed( $row );
+			}
 		}
-		return $run;
+		return array(
+			'run_id'  => $run_id,
+			'results' => $results,
+		);
 	}
 
 	/**
 	 * Start a run.
 	 */
 	public function start(): void {
-		$this->authorize();
+		$this->authorized_request();
 
 		$run_id = wp_generate_uuid4();
 		update_option(
@@ -115,11 +124,9 @@ final class Ajax {
 	 * Run a single check.
 	 */
 	public function run_check(): void {
-		$this->authorize();
-
-		$run_id   = $this->posted_run_id();
-		$check_id = isset( $_POST['check_id'] ) ? sanitize_key( wp_unslash( (string) $_POST['check_id'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
-		$run      = $this->load_run( $run_id );
+		$request  = $this->authorized_request();
+		$check_id = $request['check_id'];
+		$run      = $this->load_run( $request['run_id'] );
 		if ( null === $run ) {
 			wp_send_json_error( array( 'message' => __( 'This audit run is no longer active. Start it again.', 'store-audit-for-woocommerce' ) ), 409 );
 		}
@@ -139,9 +146,8 @@ final class Ajax {
 	 * Finish a run and build the report.
 	 */
 	public function finish(): void {
-		$this->authorize();
-
-		$run = $this->load_run( $this->posted_run_id() );
+		$request = $this->authorized_request();
+		$run     = $this->load_run( $request['run_id'] );
 		if ( null === $run ) {
 			wp_send_json_error( array( 'message' => __( 'This audit run is no longer active. Start it again.', 'store-audit-for-woocommerce' ) ), 409 );
 		}
@@ -150,7 +156,7 @@ final class Ajax {
 		Report::store_last( $report );
 		delete_option( self::RUN_OPTION );
 
-		$report['generated_at_local'] = Report::local_date( (string) $report['generated_at'] );
+		$report['generated_at_local'] = Report::local_date( Arr::get_string( $report, 'generated_at' ) );
 		wp_send_json_success( $report );
 	}
 
@@ -158,7 +164,7 @@ final class Ajax {
 	 * The last stored report as Markdown, for the copy button.
 	 */
 	public function markdown(): void {
-		$this->authorize();
+		$this->authorized_request();
 
 		$report = Report::get_last();
 		if ( null === $report ) {

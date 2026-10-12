@@ -12,6 +12,8 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,12 +88,11 @@ final class Cron extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
 		$now    = time();
 		$hooks  = array();
 		$count  = 0;
 		$oldest = 0;
-		$cron   = _get_cron_array();
+		$cron   = $this->cron_array();
 		foreach ( is_array( $cron ) ? $cron : array() as $timestamp => $events ) {
 			if ( ! is_numeric( $timestamp ) || (int) $timestamp >= $now - 3600 || ! is_array( $events ) ) {
 				continue;
@@ -106,17 +107,14 @@ final class Cron extends AbstractCheck {
 		arsort( $hooks );
 
 		// Action Scheduler (WooCommerce background jobs). The table may not exist.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$pending = null;
-		$table   = $wpdb->prefix . 'actionscheduler_actions';
-		$found   = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->prefix . 'actionscheduler_actions' ) ) );
-		if ( $table === $found ) {
+		$db      = Db::wpdb();
+		$table   = $db->prefix . 'actionscheduler_actions';
+		if ( Db::table_exists( $table ) ) {
 			// Indexed by status and scheduled date, counted only.
-			$pending = (int) $wpdb->get_var(
-				$wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}actionscheduler_actions WHERE status = 'pending' AND scheduled_date_gmt < %s", gmdate( 'Y-m-d H:i:s', $now - 3600 ) )
-			);
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only count on an indexed column; Action Scheduler has no cheaper API.
+			$pending = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE status = 'pending' AND scheduled_date_gmt < %s", $table, gmdate( 'Y-m-d H:i:s', $now - 3600 ) ) ) );
 		}
-		// phpcs:enable
 
 		return array(
 			'disabled'   => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
@@ -129,15 +127,22 @@ final class Cron extends AbstractCheck {
 	}
 
 	/**
+	 * Raw cron array; other plugins can leave it in an unexpected shape, so it is validated by the caller.
+	 */
+	private function cron_array(): mixed {
+		return _get_cron_array();
+	}
+
+	/**
 	 * Turn data into a result.
 	 *
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$count   = (int) ( $d['count'] ?? 0 );
-		$oldest  = (int) ( $d['oldest'] ?? 0 );
-		$hooks   = is_array( $d['hooks'] ?? null ) ? array_keys( $d['hooks'] ) : array();
-		$as      = isset( $d['as_pending'] ) ? (int) $d['as_pending'] : null;
+		$count   = Arr::get_int( $d, 'count' );
+		$oldest  = Arr::get_int( $d, 'oldest' );
+		$hooks   = array_keys( Arr::get_array( $d, 'hooks' ) );
+		$as      = isset( $d['as_pending'] ) ? Arr::get_int( $d, 'as_pending' ) : null;
 		$parts   = array();
 		$details = array();
 		$level   = 'ok';
@@ -154,7 +159,7 @@ final class Cron extends AbstractCheck {
 				$details[] = (string) $hook;
 			}
 			if ( count( $hooks ) > 10 ) {
-				/* translators: %d: number of more items. */
+				/* translators: %d: number of items not shown. */
 				$details[] = sprintf( __( 'and %d more', 'store-audit-for-woocommerce' ), count( $hooks ) - 10 );
 			}
 		}
@@ -165,15 +170,15 @@ final class Cron extends AbstractCheck {
 			$parts[] = sprintf( _n( '%d WooCommerce background action is waiting for more than an hour.', '%d WooCommerce background actions are waiting for more than an hour.', $as, 'store-audit-for-woocommerce' ), $as );
 		}
 
-		if ( ! empty( $d['disabled'] ) ) {
+		if ( Arr::get_bool( $d, 'disabled' ) ) {
 			$details[] = __( 'WP-Cron is switched off (DISABLE_WP_CRON). That is fine only if a real server cron job runs wp-cron.php regularly.', 'store-audit-for-woocommerce' );
 		}
-		if ( ! empty( $d['local'] ) && 'ok' !== $level ) {
+		if ( Arr::get_bool( $d, 'local' ) && 'ok' !== $level ) {
 			$details[] = __( 'This site is a local environment, so late tasks are expected when nobody visits it.', 'store-audit-for-woocommerce' );
 		}
 
 		if ( 'ok' === $level ) {
-			if ( ! empty( $d['disabled'] ) ) {
+			if ( Arr::get_bool( $d, 'disabled' ) ) {
 				return Result::info( __( 'WP-Cron is switched off and no task is late. Make sure a real server cron job is set up.', 'store-audit-for-woocommerce' ), $details );
 			}
 			return Result::ok( __( 'Scheduled tasks are running on time.', 'store-audit-for-woocommerce' ), $details );

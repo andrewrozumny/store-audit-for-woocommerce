@@ -12,6 +12,8 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,14 +88,17 @@ final class ExpiredTransients extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$db = Db::wpdb();
 		// Uses the option_name index (prefix match); the timestamp comparison only touches those rows.
-		$count = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE %s AND CAST(option_value AS UNSIGNED) < %d",
-				$wpdb->esc_like( '_transient_timeout_' ) . '%',
-				time()
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
+		$count = Arr::to_int(
+			$db->get_var(
+				$db->prepare(
+					'SELECT COUNT(*) FROM %i WHERE option_name LIKE %s AND CAST(option_value AS UNSIGNED) < %d',
+					$db->options,
+					$db->esc_like( '_transient_timeout_' ) . '%',
+					time()
+				)
 			)
 		);
 		// phpcs:enable
@@ -107,7 +112,7 @@ final class ExpiredTransients extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$count = (int) ( $d['count'] ?? 0 );
+		$count = Arr::get_int( $d, 'count' );
 		if ( 0 === $count ) {
 			return Result::ok( __( 'There are no expired transients.', 'store-audit-for-woocommerce' ) );
 		}

@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use Automattic\WooCommerce\Utilities\OrderUtil;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -87,16 +89,16 @@ final class OrdersStorage extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
 		if ( ! function_exists( 'WC' ) ) {
 			return array( 'wc' => false );
 		}
 		$hpos = class_exists( OrderUtil::class ) && OrderUtil::custom_orders_table_usage_is_enabled();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$db   = Db::wpdb();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
 		if ( $hpos ) {
-			$orders = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}wc_orders WHERE type = 'shop_order'" );
+			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE type = 'shop_order'", $db->prefix . 'wc_orders' ) ) );
 		} else {
-			$orders = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'shop_order'" );
+			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'shop_order'", $db->posts ) ) );
 		}
 		// phpcs:enable
 
@@ -113,11 +115,11 @@ final class OrdersStorage extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		if ( empty( $d['wc'] ) ) {
+		if ( ! Arr::get_bool( $d, 'wc' ) ) {
 			return Result::info( __( 'WooCommerce is not active, so there are no orders to count.', 'store-audit-for-woocommerce' ) );
 		}
-		$orders  = (int) ( $d['orders'] ?? 0 );
-		$hpos    = ! empty( $d['hpos'] );
+		$orders  = Arr::get_int( $d, 'orders' );
+		$hpos    = Arr::get_bool( $d, 'hpos' );
 		$storage = $hpos ? __( 'dedicated orders tables (HPOS)', 'store-audit-for-woocommerce' ) : __( 'the posts tables (legacy)', 'store-audit-for-woocommerce' );
 		$summary = sprintf(
 			/* translators: 1: number of orders, 2: storage type. */

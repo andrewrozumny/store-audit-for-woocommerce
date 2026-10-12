@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace StoreAudit\Checks\Security;
 
+use StoreAudit\Support\Arr;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -35,8 +37,27 @@ final class SelfProbe {
 	 */
 	public function __construct( ?callable $transport = null ) {
 		$this->transport = $transport ?? static function ( string $method, string $url, array $args ) {
-			$args['method'] = $method;
-			return wp_remote_request( $url, $args );
+			$request = array(
+				'method'      => $method,
+				'timeout'     => Arr::get_float( $args, 'timeout', 5.0 ),
+				'redirection' => Arr::get_int( $args, 'redirection' ),
+				'cookies'     => array(),
+				'user-agent'  => Arr::get_string( $args, 'user-agent' ),
+			);
+			if ( array_key_exists( 'body', $args ) ) {
+				$request['body'] = Arr::get_string( $args, 'body' );
+			}
+			if ( array_key_exists( 'limit_response_size', $args ) ) {
+				$request['limit_response_size'] = Arr::get_int( $args, 'limit_response_size' );
+			}
+			if ( array_key_exists( 'headers', $args ) ) {
+				$headers = array();
+				foreach ( Arr::to_string_keyed( $args['headers'] ) as $name => $value ) {
+					$headers[ $name ] = Arr::to_string( $value );
+				}
+				$request['headers'] = $headers;
+			}
+			return wp_remote_request( $url, $request );
 		};
 	}
 
@@ -123,7 +144,7 @@ final class SelfProbe {
 			return ProbeResponse::failure( 'Refused: not an address of this site.' );
 		}
 
-		$version = defined( 'STORE_AUDIT_VERSION' ) ? (string) STORE_AUDIT_VERSION : '0';
+		$version = defined( 'STORE_AUDIT_VERSION' ) ? STORE_AUDIT_VERSION : '0';
 		$args    = array_merge(
 			array(
 				'timeout'     => max( 1, min( 5, $timeout ) ),
@@ -143,7 +164,7 @@ final class SelfProbe {
 		}
 
 		$response = $raw['response'] ?? array();
-		$status   = is_array( $response ) ? (int) ( $response['code'] ?? 0 ) : 0;
+		$status   = is_array( $response ) ? Arr::get_int( $response, 'code' ) : 0;
 		if ( $status < 100 ) {
 			return ProbeResponse::failure( 'No HTTP status.' );
 		}
@@ -155,7 +176,7 @@ final class SelfProbe {
 		}
 		if ( is_array( $source ) ) {
 			foreach ( $source as $name => $value ) {
-				$headers[ strtolower( (string) $name ) ] = is_array( $value ) ? implode( ', ', array_map( 'strval', $value ) ) : (string) $value;
+				$headers[ strtolower( (string) $name ) ] = is_array( $value ) ? implode( ', ', Arr::to_string_list( $value ) ) : Arr::to_string( $value );
 			}
 		}
 

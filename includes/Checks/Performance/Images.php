@@ -12,6 +12,8 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,20 +88,26 @@ final class Images extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$db = Db::wpdb();
 		// Latest 50 images only, ordered by primary key.
-		$rows = $wpdb->get_results(
-			"SELECT p.post_mime_type AS mime, m.meta_value AS meta FROM {$wpdb->posts} p LEFT JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = '_wp_attachment_metadata' WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE 'image/%' AND p.post_mime_type <> 'image/svg+xml' ORDER BY p.ID DESC LIMIT 50",
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query on the newest 50 attachments; WordPress has no API for it.
+		$rows = $db->get_results(
+			$db->prepare(
+				"SELECT p.post_mime_type AS mime, m.meta_value AS meta FROM %i p LEFT JOIN %i m ON m.post_id = p.ID AND m.meta_key = '_wp_attachment_metadata' WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s AND p.post_mime_type <> %s ORDER BY p.ID DESC LIMIT 50",
+				$db->posts,
+				$db->postmeta,
+				'image/%',
+				'image/svg+xml'
+			),
 			ARRAY_A
 		);
-		// phpcs:enable
 
 		$list = array();
-		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
-			$meta   = isset( $row['meta'] ) ? maybe_unserialize( $row['meta'] ) : null;
+		foreach ( Arr::to_array( $rows ) as $row ) {
+			$row    = Arr::to_string_keyed( $row );
+			$meta   = isset( $row['meta'] ) ? maybe_unserialize( Arr::to_string( $row['meta'] ) ) : null;
 			$list[] = array(
-				'mime' => (string) $row['mime'],
+				'mime' => Arr::get_string( $row, 'mime' ),
 				'meta' => is_array( $meta ) ? $meta : null,
 			);
 		}
@@ -112,8 +120,11 @@ final class Images extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$images = is_array( $d['images'] ?? null ) ? $d['images'] : array();
-		$total  = count( $images );
+		$images = array();
+		foreach ( Arr::get_array( $d, 'images' ) as $image ) {
+			$images[] = Arr::to_string_keyed( $image );
+		}
+		$total = count( $images );
 		if ( 0 === $total ) {
 			return Result::info( __( 'There are no images in the media library to check.', 'store-audit-for-woocommerce' ) );
 		}
@@ -123,8 +134,8 @@ final class Images extends AbstractCheck {
 			if ( in_array( $image['mime'] ?? '', $modern, true ) ) {
 				return true;
 			}
-			$meta = is_array( $image['meta'] ?? null ) ? $image['meta'] : array();
-			if ( is_array( $meta['sources'] ?? null ) && array_intersect( $modern, array_keys( $meta['sources'] ) ) ) {
+			$meta = Arr::get_array( $image, 'meta' );
+			if ( array() !== array_intersect( $modern, array_keys( Arr::get_array( $meta, 'sources' ) ) ) ) {
 				return true;
 			}
 			foreach ( is_array( $meta['sizes'] ?? null ) ? $meta['sizes'] : array() as $size ) {
@@ -134,7 +145,7 @@ final class Images extends AbstractCheck {
 				if ( in_array( $size['mime-type'] ?? '', $modern, true ) ) {
 					return true;
 				}
-				if ( is_array( $size['sources'] ?? null ) && array_intersect( $modern, array_keys( $size['sources'] ) ) ) {
+				if ( array() !== array_intersect( $modern, array_keys( Arr::get_array( $size, 'sources' ) ) ) ) {
 					return true;
 				}
 			}
@@ -144,8 +155,8 @@ final class Images extends AbstractCheck {
 		$no_dims = 0;
 		$old     = 0;
 		foreach ( $images as $image ) {
-			$meta = is_array( $image['meta'] ?? null ) ? $image['meta'] : array();
-			if ( (int) ( $meta['width'] ?? 0 ) <= 0 || (int) ( $meta['height'] ?? 0 ) <= 0 ) {
+			$meta = Arr::get_array( $image, 'meta' );
+			if ( Arr::get_int( $meta, 'width' ) <= 0 || Arr::get_int( $meta, 'height' ) <= 0 ) {
 				++$no_dims;
 			}
 			if ( ! $is_new( $image ) ) {

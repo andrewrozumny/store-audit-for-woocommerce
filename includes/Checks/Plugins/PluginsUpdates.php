@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Plugins;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -77,27 +78,29 @@ final class PluginsUpdates extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$data    = ( $this->source )();
-		$plugins = $data['plugins'];
-		$themes  = $data['themes'];
+		$data    = Arr::to_array( ( $this->source )() );
+		$plugins = Arr::get_array( $data, 'plugins' );
+		$themes  = Arr::get_array( $data, 'themes' );
 
 		$lines = array();
-		foreach ( $plugins as $row ) {
+		foreach ( $plugins as $raw_row ) {
+			$row     = Arr::to_string_keyed( $raw_row );
 			$lines[] = sprintf(
 				/* translators: 1: plugin name, 2: installed version, 3: new version. */
 				__( '%1$s: %2$s -> %3$s', 'store-audit-for-woocommerce' ),
-				$row['name'],
-				$row['current'],
-				$row['new']
+				Arr::get_string( $row, 'name' ),
+				Arr::get_string( $row, 'current' ),
+				Arr::get_string( $row, 'new' )
 			);
 		}
-		foreach ( $themes as $row ) {
+		foreach ( $themes as $raw_row ) {
+			$row     = Arr::to_string_keyed( $raw_row );
 			$lines[] = sprintf(
 				/* translators: 1: theme name, 2: installed version, 3: new version. */
 				__( 'Theme %1$s: %2$s -> %3$s', 'store-audit-for-woocommerce' ),
-				$row['name'],
-				$row['current'],
-				$row['new']
+				Arr::get_string( $row, 'name' ),
+				Arr::get_string( $row, 'current' ),
+				Arr::get_string( $row, 'new' )
 			);
 		}
 
@@ -153,26 +156,26 @@ final class PluginsUpdates extends AbstractCheck {
 		$inventory = new PluginInventory();
 		$installed = $inventory->installed();
 		$transient = get_site_transient( 'update_plugins' );
-		if ( is_object( $transient ) && ! empty( $transient->response ) && is_array( $transient->response ) ) {
+		if ( is_object( $transient ) && is_array( $transient->response ?? null ) && array() !== $transient->response ) {
 			foreach ( $transient->response as $file => $update ) {
 				$file                    = (string) $file;
 				$out['plugins'][ $file ] = array(
 					'name'    => PluginInventory::name_of( $installed, $file ),
-					'current' => isset( $installed[ $file ]['Version'] ) ? (string) $installed[ $file ]['Version'] : '?',
-					'new'     => is_object( $update ) && isset( $update->new_version ) ? (string) $update->new_version : '?',
+					'current' => isset( $installed[ $file ]['Version'] ) ? Arr::to_string( $installed[ $file ]['Version'] ) : '?',
+					'new'     => is_object( $update ) && isset( $update->new_version ) ? Arr::to_string( $update->new_version ) : '?',
 				);
 			}
 		}
 
 		$transient = get_site_transient( 'update_themes' );
-		if ( is_object( $transient ) && ! empty( $transient->response ) && is_array( $transient->response ) ) {
+		if ( is_object( $transient ) && is_array( $transient->response ?? null ) && array() !== $transient->response ) {
 			foreach ( $transient->response as $slug => $update ) {
 				$slug                   = (string) $slug;
 				$theme                  = wp_get_theme( $slug );
 				$out['themes'][ $slug ] = array(
-					'name'    => $theme->exists() ? (string) $theme->get( 'Name' ) : $slug,
-					'current' => $theme->exists() ? (string) $theme->get( 'Version' ) : '?',
-					'new'     => is_array( $update ) && isset( $update['new_version'] ) ? (string) $update['new_version'] : '?',
+					'name'    => $theme->exists() ? $theme->get( 'Name' ) : $slug,
+					'current' => $theme->exists() ? $theme->get( 'Version' ) : '?',
+					'new'     => is_array( $update ) && isset( $update['new_version'] ) ? Arr::to_string( $update['new_version'] ) : '?',
 				);
 			}
 		}

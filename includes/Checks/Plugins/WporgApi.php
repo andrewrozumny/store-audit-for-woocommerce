@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace StoreAudit\Checks\Plugins;
 
+use StoreAudit\Support\Arr;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -137,13 +139,13 @@ final class WporgApi {
 	private function lookup( string $type, string $slug, string $url ): array {
 		$key    = 'store_audit_wporg_' . md5( $type . ':' . $slug );
 		$cached = ( $this->cache_get )( $key );
-		if ( is_array( $cached ) && isset( $cached['status'] ) ) {
-			/**
-			 * Cached value shape is produced by this class only.
-			 *
-			 * @var array{status:string,version:string,last_updated:int,reason:string} $cached
-			 */
-			return $cached;
+		if ( is_array( $cached ) && in_array( $cached['status'] ?? null, array( self::FOUND, self::CLOSED, self::NOT_FOUND ), true ) ) {
+			return array(
+				'status'       => Arr::get_string( $cached, 'status' ),
+				'version'      => Arr::get_string( $cached, 'version' ),
+				'last_updated' => Arr::get_int( $cached, 'last_updated' ),
+				'reason'       => Arr::get_string( $cached, 'reason' ),
+			);
 		}
 
 		++$this->requests;
@@ -158,28 +160,28 @@ final class WporgApi {
 	/**
 	 * Turn an HTTP response into the normalised array.
 	 *
-	 * @param array{code:int,body:string}|null $response Response.
+	 * @param mixed $response Response from the fetcher: array{code:int,body:string} or null.
 	 * @return array{status:string,version:string,last_updated:int,reason:string}
 	 */
-	private function parse( ?array $response ): array {
+	private function parse( mixed $response ): array {
 		$empty = array(
 			'status'       => self::UNAVAILABLE,
 			'version'      => '',
 			'last_updated' => 0,
 			'reason'       => '',
 		);
-		if ( null === $response ) {
+		if ( ! is_array( $response ) ) {
 			return $empty;
 		}
 
-		$data = json_decode( $response['body'], true );
+		$data = json_decode( Arr::get_string( $response, 'body' ), true );
 		if ( ! is_array( $data ) ) {
 			// Unreadable answer, or a server error: treat as unavailable, not as "not found".
 			return $empty;
 		}
 
 		if ( isset( $data['error'] ) ) {
-			if ( ! empty( $data['closed'] ) || 'closed' === $data['error'] ) {
+			if ( Arr::get_bool( $data, 'closed' ) || 'closed' === $data['error'] ) {
 				return array_merge(
 					$empty,
 					array(
@@ -194,7 +196,7 @@ final class WporgApi {
 			return $empty;
 		}
 
-		if ( 200 !== $response['code'] ) {
+		if ( 200 !== Arr::get_int( $response, 'code' ) ) {
 			return $empty;
 		}
 
@@ -230,8 +232,8 @@ final class WporgApi {
 			return null;
 		}
 		return array(
-			'code' => (int) wp_remote_retrieve_response_code( $response ),
-			'body' => (string) wp_remote_retrieve_body( $response ),
+			'code' => Arr::to_int( wp_remote_retrieve_response_code( $response ) ),
+			'body' => wp_remote_retrieve_body( $response ),
 		);
 	}
 }

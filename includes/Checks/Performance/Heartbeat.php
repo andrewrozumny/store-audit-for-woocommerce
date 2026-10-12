@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -88,7 +89,8 @@ final class Heartbeat extends AbstractCheck {
 	private function collect(): array {
 		$settings = apply_filters( 'heartbeat_settings', array() ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core hook.
 		$count    = static function ( string $tag ): int {
-			$hook = $GLOBALS['wp_filter'][ $tag ] ?? null;
+			$filters = Arr::to_array( $GLOBALS['wp_filter'] ?? null );
+			$hook    = $filters[ $tag ] ?? null;
 			if ( ! is_object( $hook ) || ! isset( $hook->callbacks ) || ! is_array( $hook->callbacks ) ) {
 				return 0;
 			}
@@ -99,7 +101,7 @@ final class Heartbeat extends AbstractCheck {
 			return $n;
 		};
 		return array(
-			'interval'  => is_array( $settings ) && isset( $settings['interval'] ) ? (int) $settings['interval'] : null,
+			'interval'  => is_array( $settings ) && isset( $settings['interval'] ) ? Arr::get_int( $settings, 'interval' ) : null,
 			'callbacks' => $count( 'wp_ajax_heartbeat' ) + $count( 'heartbeat_received' ),
 		);
 	}
@@ -110,8 +112,8 @@ final class Heartbeat extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$interval  = isset( $d['interval'] ) ? (int) $d['interval'] : null;
-		$callbacks = (int) ( $d['callbacks'] ?? 0 );
+		$interval  = isset( $d['interval'] ) ? Arr::get_int( $d, 'interval' ) : null;
+		$callbacks = Arr::get_int( $d, 'callbacks' );
 		$details   = array();
 
 		if ( null === $interval ) {

@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -37,11 +38,11 @@ final class TermsPage extends AbstractCheck {
 	 */
 	public function __construct( ?callable $source = null ) {
 		$this->source = $source ?? static function (): array {
-			$id   = function_exists( 'wc_terms_and_conditions_page_id' ) ? (int) wc_terms_and_conditions_page_id() : 0;
+			$id   = function_exists( 'wc_terms_and_conditions_page_id' ) ? wc_terms_and_conditions_page_id() : 0;
 			$post = $id > 0 ? get_post( $id ) : null;
 			return array(
 				'id'     => $id,
-				'status' => $post instanceof \WP_Post ? (string) $post->post_status : '',
+				'status' => $post instanceof \WP_Post ? $post->post_status : '',
 			);
 		};
 	}
@@ -85,20 +86,21 @@ final class TermsPage extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$page = ( $this->source )();
+		$page   = Arr::to_array( ( $this->source )() );
+		$status = Arr::get_string( $page, 'status' );
 
-		if ( $page['id'] <= 0 ) {
+		if ( Arr::get_int( $page, 'id' ) <= 0 ) {
 			return Result::warning( __( 'No terms and conditions page is selected for the checkout.', 'store-audit-for-woocommerce' ) );
 		}
 
-		if ( 'publish' !== $page['status'] ) {
+		if ( 'publish' !== $status ) {
 			return Result::warning(
-				'' === $page['status']
+				'' === $status
 					? __( 'The selected terms and conditions page does not exist any more.', 'store-audit-for-woocommerce' )
 					: sprintf(
 						/* translators: %s: post status such as draft or trash. */
 						__( 'The terms and conditions page is not published (status: %s).', 'store-audit-for-woocommerce' ),
-						$page['status']
+						$status
 					)
 			);
 		}

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit;
 
 use StoreAudit\Checks\Section;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -61,7 +62,7 @@ final class Report {
 				'overall'  => $score['overall'],
 				'sections' => $sections,
 			),
-			'results'        => array_values( $results ),
+			'results'        => $results,
 		);
 	}
 
@@ -81,7 +82,7 @@ final class Report {
 	 */
 	public static function get_last(): ?array {
 		$report = get_option( self::OPTION, null );
-		return is_array( $report ) && isset( $report['results'] ) ? $report : null;
+		return is_array( $report ) && isset( $report['results'] ) ? Arr::to_string_keyed( $report ) : null;
 	}
 
 	/**
@@ -116,7 +117,7 @@ final class Report {
 		if ( false === $time ) {
 			return $iso;
 		}
-		$format = trim( (string) get_option( 'date_format', 'Y-m-d' ) . ' ' . (string) get_option( 'time_format', 'H:i' ) );
+		$format = trim( Arr::to_string( get_option( 'date_format', 'Y-m-d' ), 'Y-m-d' ) . ' ' . Arr::to_string( get_option( 'time_format', 'H:i' ), 'H:i' ) );
 		$date   = wp_date( $format, $time );
 		return is_string( $date ) ? $date : $iso;
 	}
@@ -128,9 +129,9 @@ final class Report {
 	 * @param string              $extension File extension without the dot.
 	 */
 	public static function filename( array $report, string $extension ): string {
-		$host = wp_parse_url( (string) ( $report['site_url'] ?? '' ), PHP_URL_HOST );
+		$host = wp_parse_url( Arr::get_string( $report, 'site_url' ), PHP_URL_HOST );
 		$host = is_string( $host ) && '' !== $host ? $host : 'site';
-		$time = strtotime( (string) ( $report['generated_at'] ?? '' ) );
+		$time = strtotime( Arr::get_string( $report, 'generated_at' ) );
 		$date = gmdate( 'Y-m-d', false === $time ? time() : $time );
 		return sanitize_file_name( 'store-audit-' . $host . '-' . $date . '.' . $extension );
 	}
@@ -154,11 +155,12 @@ final class Report {
 	 */
 	public static function group_by_section( array $report ): array {
 		$groups = array();
-		foreach ( (array) ( $report['results'] ?? array() ) as $row ) {
+		foreach ( Arr::get_array( $report, 'results' ) as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
-			$groups[ (string) ( $row['section'] ?? '' ) ][] = $row;
+			$row = Arr::to_string_keyed( $row );
+			$groups[ Arr::get_string( $row, 'section' ) ][] = $row;
 		}
 		$ordered = array();
 		foreach ( array_keys( Section::labels() ) as $id ) {
@@ -184,7 +186,7 @@ final class Report {
 		$rank  = array_flip( self::ISSUE_ORDER );
 		$keyed = array();
 		foreach ( $rows as $i => $row ) {
-			$keyed[] = array( $rank[ (string) ( $row['severity'] ?? '' ) ] ?? 99, $i, $row );
+			$keyed[] = array( $rank[ Arr::get_string( $row, 'severity' ) ] ?? 99, $i, $row );
 		}
 		usort(
 			$keyed,
@@ -220,27 +222,33 @@ final class Report {
 	 */
 	public static function to_markdown( array $report ): string {
 		$labels   = Section::labels();
-		$score    = is_array( $report['score'] ?? null ) ? $report['score'] : array();
-		$sections = is_array( $score['sections'] ?? null ) ? $score['sections'] : array();
-		$time     = strtotime( (string) ( $report['generated_at'] ?? '' ) );
-		$date     = false === $time ? (string) ( $report['generated_at'] ?? '' ) : gmdate( 'Y-m-d H:i', $time ) . ' UTC';
+		$score    = Arr::get_map( $report, 'score' );
+		$sections = Arr::get_map( $score, 'sections' );
+		$time     = strtotime( Arr::get_string( $report, 'generated_at' ) );
+		$date     = false === $time ? Arr::get_string( $report, 'generated_at' ) : gmdate( 'Y-m-d H:i', $time ) . ' UTC';
+
+		$overall    = Arr::get_int( $score, 'overall' );
+		$wp_ver     = Arr::get_string( $report, 'wp_version' );
+		$wc_ver     = Arr::get_string( $report, 'wc_version' );
+		$plugin_ver = Arr::get_string( $report, 'plugin_version' );
+		$env        = array_filter(
+			array(
+				'' !== $wp_ver ? 'WordPress ' . $wp_ver : '',
+				'' !== $wc_ver ? 'WooCommerce ' . $wc_ver : '',
+				'' !== $plugin_ver ? 'Store Audit ' . $plugin_ver : '',
+			),
+			static fn( string $line ): bool => '' !== $line
+		);
 
 		$out   = array();
 		$out[] = '# ' . sprintf(
 			/* translators: %s: site address. */
 			__( 'Store Audit report for %s', 'store-audit-for-woocommerce' ),
-			(string) ( $report['site_url'] ?? '' )
+			Arr::get_string( $report, 'site_url' )
 		);
 		$out[] = '';
 		$out[] = '- ' . __( 'Date:', 'store-audit-for-woocommerce' ) . ' ' . $date;
-		$out[] = '- ' . __( 'Overall score:', 'store-audit-for-woocommerce' ) . ' **' . (int) ( $score['overall'] ?? 0 ) . ' / 100**';
-		$env   = array_filter(
-			array(
-				'' !== (string) ( $report['wp_version'] ?? '' ) ? 'WordPress ' . $report['wp_version'] : '',
-				'' !== (string) ( $report['wc_version'] ?? '' ) ? 'WooCommerce ' . $report['wc_version'] : '',
-				'' !== (string) ( $report['plugin_version'] ?? '' ) ? 'Store Audit ' . $report['plugin_version'] : '',
-			)
-		);
+		$out[] = '- ' . __( 'Overall score:', 'store-audit-for-woocommerce' ) . ' **' . $overall . ' / 100**';
 		if ( array() !== $env ) {
 			$out[] = '- ' . __( 'Versions:', 'store-audit-for-woocommerce' ) . ' ' . implode( ', ', $env );
 		}
@@ -251,19 +259,21 @@ final class Report {
 		$out[] = '| ' . implode( ' | ', array( __( 'Section', 'store-audit-for-woocommerce' ), __( 'Score', 'store-audit-for-woocommerce' ), __( 'Critical', 'store-audit-for-woocommerce' ), __( 'Warnings', 'store-audit-for-woocommerce' ), __( 'Info', 'store-audit-for-woocommerce' ), __( 'Passed', 'store-audit-for-woocommerce' ) ) ) . ' |';
 		$out[] = '| --- | --- | --- | --- | --- | --- |';
 		foreach ( $sections as $id => $data ) {
-			$counts = is_array( $data['counts'] ?? null ) ? $data['counts'] : array();
-			$name   = (string) ( $data['label'] ?? ( $labels[ $id ] ?? $id ) );
-			$out[]  = '| ' . str_replace( '|', '\\|', $name ) . ' | ' . (int) ( $data['score'] ?? 0 ) . ' | '
-				. (int) ( $counts[ Result::CRITICAL ] ?? 0 ) . ' | ' . (int) ( $counts[ Result::WARNING ] ?? 0 ) . ' | '
-				. (int) ( $counts[ Result::INFO ] ?? 0 ) . ' | ' . (int) ( $counts[ Result::OK ] ?? 0 ) . ' |';
+			$data   = Arr::to_string_keyed( $data );
+			$counts = Arr::get_map( $data, 'counts' );
+			$name   = Arr::get_string( $data, 'label', $labels[ $id ] ?? $id );
+			$out[]  = '| ' . str_replace( '|', '\\|', $name ) . ' | ' . Arr::get_int( $data, 'score' ) . ' | '
+				. Arr::get_int( $counts, Result::CRITICAL ) . ' | ' . Arr::get_int( $counts, Result::WARNING ) . ' | '
+				. Arr::get_int( $counts, Result::INFO ) . ' | ' . Arr::get_int( $counts, Result::OK ) . ' |';
 		}
 		$out[] = '';
 
 		foreach ( self::group_by_section( $report ) as $id => $rows ) {
-			$name = (string) ( $sections[ $id ]['label'] ?? ( $labels[ $id ] ?? $id ) );
-			$head = '## ' . $name;
-			if ( isset( $sections[ $id ]['score'] ) ) {
-				$head .= ' (' . (int) $sections[ $id ]['score'] . ' / 100)';
+			$section_data = Arr::get_map( $sections, $id );
+			$name         = Arr::get_string( $section_data, 'label', $labels[ $id ] ?? $id );
+			$head         = '## ' . $name;
+			if ( isset( $section_data['score'] ) ) {
+				$head .= ' (' . Arr::get_int( $section_data, 'score' ) . ' / 100)';
 			}
 			$out[]  = $head;
 			$out[]  = '';
@@ -271,25 +281,26 @@ final class Report {
 			$passed = array();
 			foreach ( $rows as $row ) {
 				if ( Result::OK === ( $row['severity'] ?? '' ) ) {
-					$passed[] = (string) ( $row['title'] ?? '' );
+					$passed[] = Arr::get_string( $row, 'title' );
 				} else {
 					$issues[] = $row;
 				}
 			}
 			foreach ( self::sort_issues( $issues ) as $row ) {
-				$out[] = '### ' . self::severity_label( (string) $row['severity'] ) . ': ' . (string) ( $row['title'] ?? '' );
-				$out[] = '';
-				$out[] = (string) ( $row['summary'] ?? '' );
-				$out[] = '';
-				$hint  = (string) ( $row['fix_hint'] ?? '' );
+				$out[]   = '### ' . self::severity_label( Arr::get_string( $row, 'severity' ) ) . ': ' . Arr::get_string( $row, 'title' );
+				$out[]   = '';
+				$out[]   = Arr::get_string( $row, 'summary' );
+				$out[]   = '';
+				$hint    = Arr::get_string( $row, 'fix_hint' );
+				$details = Arr::get_array( $row, 'details' );
 				if ( '' !== $hint ) {
 					$out[] = '**' . __( 'What to do:', 'store-audit-for-woocommerce' ) . '** ' . $hint;
 					$out[] = '';
 				}
-				foreach ( (array) ( $row['details'] ?? array() ) as $line ) {
-					$out[] = '- ' . (string) $line;
+				foreach ( $details as $line ) {
+					$out[] = '- ' . Arr::to_string( $line );
 				}
-				if ( array() !== (array) ( $row['details'] ?? array() ) ) {
+				if ( array() !== $details ) {
 					$out[] = '';
 				}
 			}

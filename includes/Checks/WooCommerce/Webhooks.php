@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,19 +80,20 @@ final class Webhooks extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$rows = ( $this->source )();
+		$rows = Arr::to_array( ( $this->source )() );
 		if ( array() === $rows ) {
 			return Result::ok( __( 'No webhook is disabled, paused or failing.', 'store-audit-for-woocommerce' ) );
 		}
 
 		$lines = array();
-		foreach ( $rows as $row ) {
+		foreach ( $rows as $raw_row ) {
+			$row     = Arr::to_string_keyed( $raw_row );
 			$lines[] = sprintf(
 				/* translators: 1: webhook name, 2: status, 3: failed deliveries. */
-				_n( '%1$s: status %2$s, %3$d failed delivery', '%1$s: status %2$s, %3$d failed deliveries', (int) $row['failures'], 'store-audit-for-woocommerce' ),
-				$row['name'],
-				$row['status'],
-				$row['failures']
+				_n( '%1$s: status %2$s, %3$d failed delivery', '%1$s: status %2$s, %3$d failed deliveries', Arr::get_int( $row, 'failures' ), 'store-audit-for-woocommerce' ),
+				Arr::get_string( $row, 'name' ),
+				Arr::get_string( $row, 'status' ),
+				Arr::get_int( $row, 'failures' )
 			);
 		}
 
@@ -110,20 +113,20 @@ final class Webhooks extends AbstractCheck {
 	 * @return list<array{name:string,status:string,failures:int}>
 	 */
 	private function read_webhooks(): array {
-		global $wpdb;
-		$table = $wpdb->prefix . 'wc_webhooks';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		if ( $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) {
+		$db    = Db::wpdb();
+		$table = $db->prefix . 'wc_webhooks';
+		if ( ! Db::table_exists( $table ) ) {
 			return array();
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$found = $wpdb->get_results( $wpdb->prepare( "SELECT name, status, failure_count FROM %i WHERE status <> 'active' OR failure_count > 0 ORDER BY webhook_id LIMIT 100", $table ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query on a small table; WooCommerce has no API for it.
+		$found = $db->get_results( $db->prepare( "SELECT name, status, failure_count FROM %i WHERE status <> 'active' OR failure_count > 0 ORDER BY webhook_id LIMIT 100", $table ), ARRAY_A );
 		$out   = array();
-		foreach ( (array) $found as $row ) {
+		foreach ( Arr::to_array( $found ) as $row ) {
+			$row   = Arr::to_string_keyed( $row );
 			$out[] = array(
-				'name'     => (string) $row['name'],
-				'status'   => (string) $row['status'],
-				'failures' => (int) $row['failure_count'],
+				'name'     => Arr::get_string( $row, 'name' ),
+				'status'   => Arr::get_string( $row, 'status' ),
+				'failures' => Arr::get_int( $row, 'failure_count' ),
 			);
 		}
 		return $out;

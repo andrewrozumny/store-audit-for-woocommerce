@@ -100,7 +100,7 @@ final class PhpVersion extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		if ( ! preg_match( '/^(\d+)\.(\d+)/', $this->version, $m ) ) {
+		if ( 1 !== preg_match( '/^(\d+)\.(\d+)/', $this->version, $m ) ) {
 			return Result::error(
 				/* translators: %s: PHP version string. */
 				sprintf( __( 'Could not read the PHP version "%s".', 'store-audit-for-woocommerce' ), $this->version )

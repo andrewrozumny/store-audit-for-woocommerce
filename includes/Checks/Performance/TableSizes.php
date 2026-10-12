@@ -12,6 +12,8 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,26 +88,27 @@ final class TableSizes extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
+		$db    = Db::wpdb();
 		$names = array( 'options', 'postmeta', 'posts', 'wc_orders', 'wc_orders_meta' );
 		$full  = array();
 		foreach ( $names as $name ) {
-			$full[ $wpdb->prefix . $name ] = $name;
+			$full[ $db->prefix . $name ] = $name;
 		}
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		$ph   = implode( ',', array_fill( 0, count( $full ), '%s' ) );
 		$args = array_merge( array( DB_NAME ), array_keys( $full ) );
-		$rows = $wpdb->get_results(
-			$wpdb->prepare( "SELECT TABLE_NAME AS name, (DATA_LENGTH + INDEX_LENGTH) AS bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME IN ({$ph})", $args ),
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
+		$rows = $db->get_results(
+			$db->prepare( "SELECT TABLE_NAME AS name, (DATA_LENGTH + INDEX_LENGTH) AS bytes FROM information_schema.TABLES WHERE TABLE_SCHEMA = %s AND TABLE_NAME IN ({$ph})", $args ),
 			ARRAY_A
 		);
 		// phpcs:enable
 
 		$sizes = array();
-		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
-			$key = $full[ (string) $row['name'] ] ?? null;
+		foreach ( Arr::to_array( $rows ) as $row ) {
+			$row = Arr::to_string_keyed( $row );
+			$key = $full[ Arr::get_string( $row, 'name' ) ] ?? null;
 			if ( null !== $key ) {
-				$sizes[ $key ] = (int) $row['bytes'];
+				$sizes[ $key ] = Arr::get_int( $row, 'bytes' );
 			}
 		}
 		return array( 'sizes' => $sizes );
@@ -117,25 +120,28 @@ final class TableSizes extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$sizes = is_array( $d['sizes'] ?? null ) ? $d['sizes'] : array();
+		$sizes = array();
+		foreach ( Arr::get_array( $d, 'sizes' ) as $table => $table_bytes ) {
+			$sizes[ (string) $table ] = Arr::to_int( $table_bytes );
+		}
 		if ( array() === $sizes ) {
 			return Result::info( __( 'Could not read the table sizes from the database.', 'store-audit-for-woocommerce' ) );
 		}
 		arsort( $sizes );
 		$details = array();
 		foreach ( $sizes as $name => $bytes ) {
-			$details[] = (string) $name . ': ' . $this->format_bytes( (int) $bytes );
+			$details[] = $name . ': ' . $this->format_bytes( $bytes );
 		}
-		$largest = (string) array_key_first( $sizes );
+		$largest = array_key_first( $sizes );
 		$summary = sprintf(
 			/* translators: 1: table name, 2: size. */
 			__( 'The largest table checked is %1$s (%2$s).', 'store-audit-for-woocommerce' ),
 			$largest,
-			$this->format_bytes( (int) $sizes[ $largest ] )
+			$this->format_bytes( $sizes[ $largest ] )
 		);
 
-		$postmeta = (int) ( $sizes['postmeta'] ?? 0 );
-		$options  = (int) ( $sizes['options'] ?? 0 );
+		$postmeta = Arr::get_int( $sizes, 'postmeta' );
+		$options  = Arr::get_int( $sizes, 'options' );
 		if ( $postmeta > 1073741824 || $options > 104857600 ) {
 			$which = $postmeta > 1073741824 ? 'postmeta' : 'options';
 			return Result::warning(

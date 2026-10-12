@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -91,13 +93,17 @@ final class ApiKeys extends AbstractCheck {
 		$cutoff = strtotime( '-12 months', $this->now );
 		$lines  = array();
 
-		foreach ( $keys as $key ) {
-			if ( ! in_array( $key['permissions'], array( 'write', 'read_write' ), true ) ) {
+		foreach ( Arr::to_array( $keys ) as $raw_key ) {
+			$key         = Arr::to_string_keyed( $raw_key );
+			$permissions = Arr::get_string( $key, 'permissions' );
+			if ( ! in_array( $permissions, array( 'write', 'read_write' ), true ) ) {
 				continue;
 			}
-			$access = null === $key['last_access'] || '' === $key['last_access'] || 0 === strpos( $key['last_access'], '0000' )
+			$last_access = $key['last_access'] ?? null;
+			$access      = ! is_string( $last_access ) || '' === $last_access || str_starts_with( $last_access, '0000' )
 				? false
-				: strtotime( $key['last_access'] . ' UTC' );
+				: strtotime( $last_access . ' UTC' );
+			$description = Arr::get_string( $key, 'description' );
 
 			if ( false === $access ) {
 				$last = __( 'never used', 'store-audit-for-woocommerce' );
@@ -114,9 +120,9 @@ final class ApiKeys extends AbstractCheck {
 			$lines[] = sprintf(
 				/* translators: 1: key description, 2: permission, 3: user, 4: last access. */
 				__( '%1$s (%2$s, user %3$s): %4$s', 'store-audit-for-woocommerce' ),
-				'' !== $key['description'] ? $key['description'] : __( '(no description)', 'store-audit-for-woocommerce' ),
-				$key['permissions'],
-				$key['user'],
+				'' !== $description ? $description : __( '(no description)', 'store-audit-for-woocommerce' ),
+				$permissions,
+				Arr::get_string( $key, 'user' ),
 				$last
 			);
 		}
@@ -141,22 +147,24 @@ final class ApiKeys extends AbstractCheck {
 	 * @return list<array{description:string,permissions:string,last_access:?string,user:string}>
 	 */
 	private function read_keys(): array {
-		global $wpdb;
-		$table = $wpdb->prefix . 'woocommerce_api_keys';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		if ( $table !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) ) {
+		$db    = Db::wpdb();
+		$table = $db->prefix . 'woocommerce_api_keys';
+		if ( ! Db::table_exists( $table ) ) {
 			return array();
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$found = $wpdb->get_results( $wpdb->prepare( 'SELECT description, user_id, permissions, last_access FROM %i ORDER BY key_id LIMIT 200', $table ), ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query on a small table; WooCommerce has no API for it.
+		$found = $db->get_results( $db->prepare( 'SELECT description, user_id, permissions, last_access FROM %i ORDER BY key_id LIMIT 200', $table ), ARRAY_A );
 		$out   = array();
-		foreach ( (array) $found as $row ) {
-			$user  = get_userdata( (int) $row['user_id'] );
-			$out[] = array(
-				'description' => (string) $row['description'],
-				'permissions' => (string) $row['permissions'],
-				'last_access' => null === $row['last_access'] ? null : (string) $row['last_access'],
-				'user'        => $user instanceof \WP_User ? $user->user_login : '#' . (int) $row['user_id'],
+		foreach ( Arr::to_array( $found ) as $row ) {
+			$row         = Arr::to_string_keyed( $row );
+			$user_id     = Arr::get_int( $row, 'user_id' );
+			$user        = get_userdata( $user_id );
+			$last_access = $row['last_access'] ?? null;
+			$out[]       = array(
+				'description' => Arr::get_string( $row, 'description' ),
+				'permissions' => Arr::get_string( $row, 'permissions' ),
+				'last_access' => is_string( $last_access ) ? $last_access : null,
+				'user'        => $user instanceof \WP_User ? $user->user_login : '#' . $user_id,
 			);
 		}
 		return $out;

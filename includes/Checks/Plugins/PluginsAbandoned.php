@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Plugins;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -120,7 +121,7 @@ final class PluginsAbandoned extends AbstractCheck {
 	 */
 	public function run(): Result {
 		$installed = $this->inventory->installed();
-		$start     = ( $this->clock )();
+		$start     = Arr::to_float( ( $this->clock )() );
 		$cutoff    = strtotime( '-12 months', $this->now );
 
 		$closed      = array();
@@ -135,7 +136,7 @@ final class PluginsAbandoned extends AbstractCheck {
 				continue;
 			}
 			$name = PluginInventory::name_of( $installed, $file );
-			if ( $looked_up >= self::MAX_PLUGINS || ( ( $this->clock )() - $start ) > self::BUDGET_SECONDS ) {
+			if ( $looked_up >= self::MAX_PLUGINS || ( Arr::to_float( ( $this->clock )() ) - $start ) > self::BUDGET_SECONDS ) {
 				++$skipped;
 				continue;
 			}

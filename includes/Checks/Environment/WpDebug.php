@@ -44,7 +44,7 @@ final class WpDebug extends AbstractCheck {
 	 */
 	public function __construct( ?bool $debug = null, ?bool $display = null ) {
 		$this->debug   = $debug ?? ( defined( 'WP_DEBUG' ) && WP_DEBUG );
-		$this->display = $display ?? ( ! defined( 'WP_DEBUG_DISPLAY' ) || (bool) WP_DEBUG_DISPLAY );
+		$this->display = $display ?? ( ! defined( 'WP_DEBUG_DISPLAY' ) || WP_DEBUG_DISPLAY );
 	}
 
 	/**

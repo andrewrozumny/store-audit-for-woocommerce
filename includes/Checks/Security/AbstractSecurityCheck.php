@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Checks\AbstractCheck;
+use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -36,15 +38,7 @@ abstract class AbstractSecurityCheck extends AbstractCheck {
 	 * @return list<string>
 	 */
 	protected function cap_list( array $items, int $max = 20 ): array {
-		$items = array_values( $items );
-		if ( count( $items ) <= $max ) {
-			return $items;
-		}
-		$more  = count( $items ) - $max;
-		$items = array_slice( $items, 0, $max );
-		/* translators: %d: number of items not shown. */
-		$items[] = sprintf( __( 'and %d more', 'store-audit-for-woocommerce' ), $more );
-		return $items;
+		return DetailList::cap( $items, $max );
 	}
 
 	/**
@@ -61,7 +55,9 @@ abstract class AbstractSecurityCheck extends AbstractCheck {
 		);
 		$list  = array();
 		foreach ( $users as $user ) {
-			$list[] = $this->normalise_user( $user );
+			if ( $user instanceof \WP_User ) {
+				$list[] = $this->normalise_user( $user );
+			}
 		}
 		return $list;
 	}
@@ -85,12 +81,44 @@ abstract class AbstractSecurityCheck extends AbstractCheck {
 	 */
 	private function normalise_user( \WP_User $user ): array {
 		return array(
-			'id'           => (int) $user->ID,
-			'login'        => (string) $user->user_login,
-			'display_name' => (string) $user->display_name,
-			'nicename'     => (string) $user->user_nicename,
-			'email'        => (string) $user->user_email,
-			'roles'        => array_values( array_map( 'strval', (array) $user->roles ) ),
+			'id'           => $user->ID,
+			'login'        => $user->user_login,
+			'display_name' => $user->display_name,
+			'nicename'     => $user->user_nicename,
+			'email'        => $user->user_email,
+			'roles'        => array_values( $user->roles ),
+		);
+	}
+
+	/**
+	 * Administrator rows from an injected source, checked and completed with empty defaults.
+	 *
+	 * @param mixed $rows Rows returned by the source.
+	 * @return list<array{id:int,login:string,display_name:string,nicename:string,email:string,roles:list<string>}>
+	 */
+	protected function normalise_admins( mixed $rows ): array {
+		$list = array();
+		foreach ( Arr::to_array( $rows ) as $row ) {
+			$list[] = $this->normalise_admin_row( $row );
+		}
+		return $list;
+	}
+
+	/**
+	 * One user row, checked and completed with empty defaults.
+	 *
+	 * @param mixed $row Row.
+	 * @return array{id:int,login:string,display_name:string,nicename:string,email:string,roles:list<string>}
+	 */
+	protected function normalise_admin_row( mixed $row ): array {
+		$row = Arr::to_string_keyed( $row );
+		return array(
+			'id'           => Arr::get_int( $row, 'id' ),
+			'login'        => Arr::get_string( $row, 'login' ),
+			'display_name' => Arr::get_string( $row, 'display_name' ),
+			'nicename'     => Arr::get_string( $row, 'nicename' ),
+			'email'        => Arr::get_string( $row, 'email' ),
+			'roles'        => Arr::to_string_list( Arr::get_array( $row, 'roles' ) ),
 		);
 	}
 }

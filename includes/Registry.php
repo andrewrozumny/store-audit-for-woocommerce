@@ -34,12 +34,7 @@ final class Registry {
 			Checks\Performance\Provider::checks()
 		);
 
-		/**
-		 * Filters the list of audit checks.
-		 *
-		 * @param list<CheckInterface> $checks Checks.
-		 */
-		$checks = apply_filters( 'store_audit_checks', $checks );
+		$checks = self::filter_checks( $checks );
 
 		$keyed = array();
 		if ( ! is_array( $checks ) ) {
@@ -51,6 +46,20 @@ final class Registry {
 			}
 		}
 		return $keyed;
+	}
+
+	/**
+	 * Run the checks through the public filter. Third-party code may return anything, so the result is untyped.
+	 *
+	 * @param array<int,CheckInterface> $checks Checks.
+	 */
+	private static function filter_checks( array $checks ): mixed {
+		/**
+		 * Filters the list of audit checks.
+		 *
+		 * @param list<CheckInterface> $checks Checks.
+		 */
+		return apply_filters( 'store_audit_checks', array_values( $checks ) );
 	}
 
 	/**

@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use Automattic\WooCommerce\Utilities\OrderUtil;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -87,15 +89,15 @@ final class ObjectCache extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
+		$db       = Db::wpdb();
 		$counts   = wp_count_posts( 'product' );
-		$products = isset( $counts->publish ) ? (int) $counts->publish : 0;
+		$products = Arr::to_int( $counts->publish ?? null );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only count for the audit; there is no cheaper WooCommerce API.
 		if ( class_exists( OrderUtil::class ) && OrderUtil::custom_orders_table_usage_is_enabled() ) {
-			$orders = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}wc_orders WHERE type = 'shop_order'" );
+			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE type = 'shop_order'", $db->prefix . 'wc_orders' ) ) );
 		} else {
-			$orders = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'shop_order'" );
+			$orders = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'shop_order'", $db->posts ) ) );
 		}
 		// phpcs:enable
 
@@ -112,11 +114,11 @@ final class ObjectCache extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		if ( ! empty( $d['ext'] ) ) {
+		if ( Arr::get_bool( $d, 'ext' ) ) {
 			return Result::ok( __( 'A persistent object cache is in use.', 'store-audit-for-woocommerce' ) );
 		}
-		$products = (int) ( $d['products'] ?? 0 );
-		$orders   = (int) ( $d['orders'] ?? 0 );
+		$products = Arr::get_int( $d, 'products' );
+		$orders   = Arr::get_int( $d, 'orders' );
 		$details  = array(
 			/* translators: %d: number of products. */
 			sprintf( __( 'Published products: %d', 'store-audit-for-woocommerce' ), $products ),

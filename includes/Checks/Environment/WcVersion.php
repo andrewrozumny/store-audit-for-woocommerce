@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -89,13 +90,15 @@ final class WcVersion extends AbstractCheck {
 		if ( ! function_exists( 'WC' ) ) {
 			return array( 'active' => false );
 		}
-		$current = (string) WC()->version;
+		$current = WC()->version;
 		$latest  = null;
 		$plugins = get_site_transient( 'update_plugins' );
 		if ( is_object( $plugins ) ) {
-			if ( isset( $plugins->response['woocommerce/woocommerce.php']->new_version ) ) {
-				$latest = (string) $plugins->response['woocommerce/woocommerce.php']->new_version;
-			} elseif ( ! empty( $plugins->last_checked ) ) {
+			$response = $plugins->response ?? null;
+			$offer    = is_array( $response ) ? ( $response['woocommerce/woocommerce.php'] ?? null ) : null;
+			if ( is_object( $offer ) && isset( $offer->new_version ) ) {
+				$latest = Arr::to_string( $offer->new_version );
+			} elseif ( Arr::to_int( $plugins->last_checked ?? null ) > 0 ) {
 				$latest = $current;
 			}
 		}
@@ -112,11 +115,11 @@ final class WcVersion extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		if ( empty( $d['active'] ) ) {
+		if ( ! Arr::get_bool( $d, 'active' ) ) {
 			return Result::info( __( 'WooCommerce is not active, so there is nothing to check.', 'store-audit-for-woocommerce' ) );
 		}
-		$current = (string) ( $d['current'] ?? '' );
-		$latest  = isset( $d['latest'] ) ? (string) $d['latest'] : null;
+		$current = Arr::get_string( $d, 'current' );
+		$latest  = isset( $d['latest'] ) ? Arr::get_string( $d, 'latest' ) : null;
 
 		if ( version_compare( $current, '9.0', '<' ) ) {
 			return Result::critical(

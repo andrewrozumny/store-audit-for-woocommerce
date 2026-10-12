@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -97,8 +98,17 @@ final class TestGateways extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$all     = ( $this->source )();
-		$enabled = array_values( array_filter( $all, static fn( array $g ): bool => $g['enabled'] ) );
+		$enabled = array();
+		foreach ( Arr::to_array( ( $this->source )() ) as $raw ) {
+			$gateway = Arr::to_string_keyed( $raw );
+			if ( Arr::get_bool( $gateway, 'enabled' ) ) {
+				$enabled[] = array(
+					'id'    => Arr::get_string( $gateway, 'id' ),
+					'title' => Arr::get_string( $gateway, 'title' ),
+					'test'  => Arr::get_bool( $gateway, 'test' ),
+				);
+			}
+		}
 
 		if ( array() === $enabled ) {
 			return Result::critical( __( 'No payment method is enabled, so customers cannot pay.', 'store-audit-for-woocommerce' ) );
@@ -176,14 +186,17 @@ final class TestGateways extends AbstractCheck {
 		}
 		$out = array();
 		foreach ( WC()->payment_gateways()->payment_gateways() as $gateway ) {
+			if ( ! $gateway instanceof \WC_Payment_Gateway ) {
+				continue;
+			}
 			$enabled = 'yes' === $gateway->enabled;
-			$id      = (string) $gateway->id;
+			$id      = Arr::to_string( $gateway->id );
 			$test    = false;
 			if ( $enabled ) {
-				$settings = is_array( $gateway->settings ) ? $gateway->settings : array();
+				$settings = Arr::to_array( $gateway->settings );
 				$test     = self::settings_in_test_mode( $settings ) || $this->known_plugin_test_mode( $id );
 			}
-			$title = wp_strip_all_tags( (string) $gateway->get_method_title() );
+			$title = wp_strip_all_tags( Arr::to_string( $gateway->get_method_title() ) );
 			$out[] = array(
 				'id'      => $id,
 				'title'   => '' !== $title ? $title : $id,
@@ -203,7 +216,7 @@ final class TestGateways extends AbstractCheck {
 		if ( 0 === strpos( $id, 'ppcp' ) ) {
 			foreach ( array( 'woocommerce-ppcp-settings', 'woocommerce-ppcp-data-common' ) as $option ) {
 				$value = get_option( $option, array() );
-				if ( is_array( $value ) && ( self::settings_in_test_mode( $value ) || ! empty( $value['sandbox_on'] ) ) ) {
+				if ( is_array( $value ) && ( self::settings_in_test_mode( $value ) || Arr::get_bool( $value, 'sandbox_on' ) ) ) {
 					return true;
 				}
 			}

@@ -9,8 +9,10 @@ declare(strict_types=1);
 
 namespace StoreAudit\Admin;
 
+use StoreAudit\Checks\Section;
 use StoreAudit\Report;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -47,7 +49,7 @@ final class Exports {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			wp_die( esc_html__( 'You are not allowed to export the audit report.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
-		if ( ! check_admin_referer( self::NONCE_ACTION ) ) {
+		if ( false === check_admin_referer( self::NONCE_ACTION ) ) {
 			wp_die( esc_html__( 'Security check failed. Reload the page and try again.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
 	}
@@ -105,23 +107,33 @@ final class Exports {
 		wp_register_style( 'store-audit-print', STORE_AUDIT_URL . 'resources/print.css', array(), STORE_AUDIT_VERSION );
 		wp_register_script( 'store-audit-print', STORE_AUDIT_URL . 'resources/print.js', array(), STORE_AUDIT_VERSION, true );
 
-		echo self::render_document( $report ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from escaped parts in render_document().
+		self::print_document( $report );
 		exit;
 	}
 
 	/**
-	 * Full HTML document for a report.
+	 * Full HTML document for a report, as a string.
 	 *
 	 * @param array<string,mixed> $report Report.
 	 */
 	public static function render_document( array $report ): string {
+		ob_start();
+		self::print_document( $report );
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Output the full HTML document for a report. Every dynamic value is escaped where it is printed.
+	 *
+	 * @param array<string,mixed> $report Report.
+	 */
+	public static function print_document( array $report ): void {
 		$title = sprintf(
 			/* translators: %s: site address. */
 			__( 'Store Audit report for %s', 'store-audit-for-woocommerce' ),
-			(string) ( $report['site_url'] ?? '' )
+			Arr::get_string( $report, 'site_url' )
 		);
 
-		ob_start();
 		?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -134,33 +146,42 @@ final class Exports {
 </head>
 <body class="store-audit-print">
 <main class="sap-page">
-		<?php echo self::render_body( $report ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped inside render_body(). ?>
+		<?php self::print_body( $report ); ?>
 </main>
 		<?php wp_print_scripts( 'store-audit-print' ); ?>
 </body>
 </html>
 		<?php
-		return (string) ob_get_clean();
 	}
 
 	/**
-	 * Report body markup. Every dynamic value is escaped.
+	 * Report body markup, as a string. Every dynamic value is escaped.
 	 *
 	 * @param array<string,mixed> $report Report.
 	 */
 	public static function render_body( array $report ): string {
-		$labels   = \StoreAudit\Checks\Section::labels();
-		$score    = is_array( $report['score'] ?? null ) ? $report['score'] : array();
-		$sections = is_array( $score['sections'] ?? null ) ? $score['sections'] : array();
-		$overall  = (int) ( $score['overall'] ?? 0 );
-		$when     = Report::local_date( (string) ( $report['generated_at'] ?? '' ) );
-
 		ob_start();
+		self::print_body( $report );
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Output the report body markup. Every dynamic value is escaped where it is printed.
+	 *
+	 * @param array<string,mixed> $report Report.
+	 */
+	public static function print_body( array $report ): void {
+		$labels   = Section::labels();
+		$score    = Arr::get_map( $report, 'score' );
+		$sections = Arr::get_map( $score, 'sections' );
+		$overall  = Arr::get_int( $score, 'overall' );
+		$when     = Report::local_date( Arr::get_string( $report, 'generated_at' ) );
+
 		?>
 <header class="sap-header">
 	<div>
 		<h1><?php echo esc_html__( 'Store Audit report', 'store-audit-for-woocommerce' ); ?></h1>
-		<p class="sap-meta"><?php echo esc_html( (string) ( $report['site_url'] ?? '' ) ); ?><br><?php echo esc_html( $when ); ?></p>
+		<p class="sap-meta"><?php echo esc_html( Arr::get_string( $report, 'site_url' ) ); ?><br><?php echo esc_html( $when ); ?></p>
 	</div>
 	<div class="sap-score <?php echo esc_attr( self::score_class( $overall ) ); ?>">
 		<span class="sap-score-number"><?php echo esc_html( (string) $overall ); ?></span>
@@ -181,15 +202,18 @@ final class Exports {
 		</tr>
 	</thead>
 	<tbody>
-		<?php foreach ( $sections as $id => $data ) : ?>
-			<?php $counts = is_array( $data['counts'] ?? null ) ? $data['counts'] : array(); ?>
+		<?php foreach ( $sections as $id => $raw_data ) : ?>
+			<?php
+			$data   = Arr::to_string_keyed( $raw_data );
+			$counts = Arr::get_map( $data, 'counts' );
+			?>
 		<tr>
-			<td><?php echo esc_html( (string) ( $data['label'] ?? ( $labels[ $id ] ?? $id ) ) ); ?></td>
-			<td><strong><?php echo esc_html( (string) (int) ( $data['score'] ?? 0 ) ); ?></strong></td>
-			<td><?php echo esc_html( (string) (int) ( $counts[ Result::CRITICAL ] ?? 0 ) ); ?></td>
-			<td><?php echo esc_html( (string) (int) ( $counts[ Result::WARNING ] ?? 0 ) ); ?></td>
-			<td><?php echo esc_html( (string) (int) ( $counts[ Result::INFO ] ?? 0 ) ); ?></td>
-			<td><?php echo esc_html( (string) (int) ( $counts[ Result::OK ] ?? 0 ) ); ?></td>
+			<td><?php echo esc_html( Arr::get_string( $data, 'label', $labels[ $id ] ?? $id ) ); ?></td>
+			<td><strong><?php echo esc_html( (string) Arr::get_int( $data, 'score' ) ); ?></strong></td>
+			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::CRITICAL ) ); ?></td>
+			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::WARNING ) ); ?></td>
+			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::INFO ) ); ?></td>
+			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::OK ) ); ?></td>
 		</tr>
 		<?php endforeach; ?>
 	</tbody>
@@ -201,26 +225,26 @@ final class Exports {
 			$passed = array();
 			foreach ( $rows as $row ) {
 				if ( Result::OK === ( $row['severity'] ?? '' ) ) {
-					$passed[] = (string) ( $row['title'] ?? '' );
+					$passed[] = Arr::get_string( $row, 'title' );
 				} else {
 					$issues[] = $row;
 				}
 			}
 			?>
 <section class="sap-section">
-	<h2><?php echo esc_html( (string) ( $sections[ $id ]['label'] ?? ( $labels[ $id ] ?? $id ) ) ); ?></h2>
+	<h2><?php echo esc_html( Arr::get_string( Arr::get_map( $sections, $id ), 'label', $labels[ $id ] ?? $id ) ); ?></h2>
 			<?php foreach ( Report::sort_issues( $issues ) as $row ) : ?>
-				<?php $severity = (string) ( $row['severity'] ?? '' ); ?>
+				<?php $severity = Arr::get_string( $row, 'severity' ); ?>
 	<article class="sap-issue sap-<?php echo esc_attr( $severity ); ?>">
-		<h3><span class="sap-badge"><?php echo esc_html( Report::severity_label( $severity ) ); ?></span> <?php echo esc_html( (string) ( $row['title'] ?? '' ) ); ?></h3>
-		<p><?php echo esc_html( (string) ( $row['summary'] ?? '' ) ); ?></p>
-				<?php if ( '' !== (string) ( $row['fix_hint'] ?? '' ) ) : ?>
-		<p><strong><?php echo esc_html__( 'What to do:', 'store-audit-for-woocommerce' ); ?></strong> <?php echo esc_html( (string) $row['fix_hint'] ); ?></p>
+		<h3><span class="sap-badge"><?php echo esc_html( Report::severity_label( $severity ) ); ?></span> <?php echo esc_html( Arr::get_string( $row, 'title' ) ); ?></h3>
+		<p><?php echo esc_html( Arr::get_string( $row, 'summary' ) ); ?></p>
+				<?php if ( '' !== Arr::get_string( $row, 'fix_hint' ) ) : ?>
+		<p><strong><?php echo esc_html__( 'What to do:', 'store-audit-for-woocommerce' ); ?></strong> <?php echo esc_html( Arr::get_string( $row, 'fix_hint' ) ); ?></p>
 		<?php endif; ?>
-				<?php if ( array() !== (array) ( $row['details'] ?? array() ) ) : ?>
+				<?php if ( array() !== Arr::get_array( $row, 'details' ) ) : ?>
 		<ul>
-					<?php foreach ( (array) $row['details'] as $line ) : ?>
-			<li><?php echo esc_html( (string) $line ); ?></li>
+					<?php foreach ( Arr::get_array( $row, 'details' ) as $line ) : ?>
+			<li><?php echo esc_html( Arr::to_string( $line ) ); ?></li>
 			<?php endforeach; ?>
 		</ul>
 		<?php endif; ?>
@@ -254,7 +278,6 @@ final class Exports {
 		?>
 							</footer>
 		<?php
-		return (string) ob_get_clean();
 	}
 
 	/**

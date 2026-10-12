@@ -12,6 +12,8 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,31 +88,34 @@ final class Autoload extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
+		$db     = Db::wpdb();
 		$values = function_exists( 'wp_autoload_values_to_autoload' ) ? wp_autoload_values_to_autoload() : array( 'yes', 'on' );
 		$ph     = implode( ',', array_fill( 0, count( $values ), '%s' ) );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		$args   = array_merge( array( $db->options ), $values );
 		// Reads only the autoloaded rows; the top-10 sort is the heaviest part.
-		$total = $wpdb->get_row(
-			$wpdb->prepare( "SELECT COUNT(*) AS n, SUM(LENGTH(option_value)) AS bytes FROM {$wpdb->options} WHERE autoload IN ({$ph})", $values ),
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
+		$total = $db->get_row(
+			$db->prepare( "SELECT COUNT(*) AS n, SUM(LENGTH(option_value)) AS bytes FROM %i WHERE autoload IN ({$ph})", $args ),
 			ARRAY_A
 		);
-		$top   = $wpdb->get_results(
-			$wpdb->prepare( "SELECT option_name AS name, LENGTH(option_value) AS size FROM {$wpdb->options} WHERE autoload IN ({$ph}) ORDER BY size DESC LIMIT 10", $values ),
+		$top   = $db->get_results(
+			$db->prepare( "SELECT option_name AS name, LENGTH(option_value) AS size FROM %i WHERE autoload IN ({$ph}) ORDER BY size DESC LIMIT 10", $args ),
 			ARRAY_A
 		);
 		// phpcs:enable
 
 		$list = array();
-		foreach ( is_array( $top ) ? $top : array() as $row ) {
+		foreach ( Arr::to_array( $top ) as $row ) {
+			$row    = Arr::to_string_keyed( $row );
 			$list[] = array(
-				'name' => (string) $row['name'],
-				'size' => (int) $row['size'],
+				'name' => Arr::get_string( $row, 'name' ),
+				'size' => Arr::get_int( $row, 'size' ),
 			);
 		}
+		$total = Arr::to_string_keyed( $total );
 		return array(
-			'count' => is_array( $total ) ? (int) $total['n'] : 0,
-			'bytes' => is_array( $total ) ? (int) $total['bytes'] : 0,
+			'count' => Arr::get_int( $total, 'n' ),
+			'bytes' => Arr::get_int( $total, 'bytes' ),
 			'top'   => $list,
 		);
 	}
@@ -121,13 +126,14 @@ final class Autoload extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$count = (int) ( $d['count'] ?? 0 );
-		$bytes = (int) ( $d['bytes'] ?? 0 );
-		$top   = is_array( $d['top'] ?? null ) ? $d['top'] : array();
+		$count = Arr::get_int( $d, 'count' );
+		$bytes = Arr::get_int( $d, 'bytes' );
+		$top   = Arr::get_array( $d, 'top' );
 
 		$details = array();
 		foreach ( array_slice( $top, 0, 10 ) as $row ) {
-			$details[] = (string) $row['name'] . ': ' . $this->format_bytes( (int) $row['size'] );
+			$row       = Arr::to_string_keyed( $row );
+			$details[] = Arr::get_string( $row, 'name' ) . ': ' . $this->format_bytes( Arr::get_int( $row, 'size' ) );
 		}
 		$summary = sprintf(
 			/* translators: 1: number of options, 2: total size. */

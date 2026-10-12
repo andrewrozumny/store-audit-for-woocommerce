@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,30 +80,31 @@ final class NegativeStock extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$data = ( $this->source )();
+		$data  = Arr::to_array( ( $this->source )() );
+		$count = Arr::get_int( $data, 'count' );
 
-		if ( ! $data['managing'] ) {
+		if ( ! Arr::get_bool( $data, 'managing' ) ) {
 			return Result::info( __( 'Stock management is turned off, so stock levels are not tracked.', 'store-audit-for-woocommerce' ) );
 		}
 
-		if ( 0 === $data['count'] ) {
+		if ( 0 === $count ) {
 			return Result::ok( __( 'No product has negative stock.', 'store-audit-for-woocommerce' ) );
 		}
 
-		$names = $data['names'];
-		if ( $data['count'] > count( $names ) ) {
+		$names = Arr::to_string_list( Arr::get_array( $data, 'names' ) );
+		if ( $count > count( $names ) ) {
 			$names[] = sprintf(
-				/* translators: %d: number of products not shown. */
+				/* translators: %d: number of items not shown. */
 				__( 'and %d more', 'store-audit-for-woocommerce' ),
-				$data['count'] - count( $names )
+				$count - count( $names )
 			);
 		}
 
 		return Result::warning(
 			sprintf(
 				/* translators: %d: number of products. */
-				_n( '%d product has negative stock.', '%d products have negative stock.', $data['count'], 'store-audit-for-woocommerce' ),
-				$data['count']
+				_n( '%d product has negative stock.', '%d products have negative stock.', $count, 'store-audit-for-woocommerce' ),
+				$count
 			),
 			$names
 		);
@@ -114,7 +117,7 @@ final class NegativeStock extends AbstractCheck {
 	 * @return array{managing:bool,count:int,names:list<string>}
 	 */
 	private function read_stock(): array {
-		global $wpdb;
+		$db = Db::wpdb();
 
 		$managing = 'yes' === get_option( 'woocommerce_manage_stock', 'yes' );
 		if ( ! $managing ) {
@@ -125,26 +128,24 @@ final class NegativeStock extends AbstractCheck {
 			);
 		}
 
-		$lookup = $wpdb->prefix . 'wc_product_meta_lookup';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$has_lookup = $lookup === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $lookup ) ) );
+		$lookup     = $db->prefix . 'wc_product_meta_lookup';
+		$has_lookup = Db::table_exists( $lookup );
 
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit counts on indexed columns; there is no WooCommerce API for them.
 		if ( $has_lookup ) {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$count = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE stock_quantity < 0', $lookup ) );
-			$ids   = $wpdb->get_col( $wpdb->prepare( 'SELECT product_id FROM %i WHERE stock_quantity < 0 ORDER BY product_id LIMIT 20', $lookup ) );
-			// phpcs:enable
+			$count = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i WHERE stock_quantity < 0', $lookup ) ) );
+			$ids   = $db->get_col( $db->prepare( 'SELECT product_id FROM %i WHERE stock_quantity < 0 ORDER BY product_id LIMIT 20', $lookup ) );
 		} else {
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key = '_stock' AND CAST(meta_value AS SIGNED) < 0" );
-			$ids   = $wpdb->get_col( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_stock' AND CAST(meta_value AS SIGNED) < 0 ORDER BY post_id LIMIT 20" );
-			// phpcs:enable
+			$count = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE meta_key = '_stock' AND CAST(meta_value AS SIGNED) < 0", $db->postmeta ) ) );
+			$ids   = $db->get_col( $db->prepare( "SELECT post_id FROM %i WHERE meta_key = '_stock' AND CAST(meta_value AS SIGNED) < 0 ORDER BY post_id LIMIT 20", $db->postmeta ) );
 		}
+		// phpcs:enable
 
 		$names = array();
-		foreach ( (array) $ids as $id ) {
-			$title   = get_the_title( (int) $id );
-			$names[] = '' !== $title ? $title : '#' . (int) $id;
+		foreach ( $ids as $id ) {
+			$post_id = Arr::to_int( $id );
+			$title   = get_the_title( $post_id );
+			$names[] = '' !== $title ? $title : '#' . $post_id;
 		}
 
 		return array(

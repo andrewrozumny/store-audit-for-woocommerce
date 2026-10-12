@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -87,8 +88,8 @@ final class Https extends AbstractCheck {
 	 */
 	private function collect(): array {
 		return array(
-			'home'    => (string) get_option( 'home' ),
-			'siteurl' => (string) get_option( 'siteurl' ),
+			'home'    => Arr::to_string( get_option( 'home' ) ),
+			'siteurl' => Arr::to_string( get_option( 'siteurl' ) ),
 			'ssl'     => is_ssl(),
 			'cli'     => 'cli' === PHP_SAPI,
 		);
@@ -100,8 +101,8 @@ final class Https extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$home    = (string) ( $d['home'] ?? '' );
-		$siteurl = (string) ( $d['siteurl'] ?? '' );
+		$home    = Arr::get_string( $d, 'home' );
+		$siteurl = Arr::get_string( $d, 'siteurl' );
 		$http    = array();
 		if ( 0 !== stripos( $home, 'https://' ) ) {
 			/* translators: %s: URL. */
@@ -125,7 +126,7 @@ final class Https extends AbstractCheck {
 		}
 
 		$details = array();
-		if ( empty( $d['ssl'] ) && empty( $d['cli'] ) ) {
+		if ( ! Arr::get_bool( $d, 'ssl' ) && ! Arr::get_bool( $d, 'cli' ) ) {
 			$details[] = __( 'The current request was not detected as https. If you use a proxy or CDN, check that it passes the HTTPS information to WordPress.', 'store-audit-for-woocommerce' );
 		}
 

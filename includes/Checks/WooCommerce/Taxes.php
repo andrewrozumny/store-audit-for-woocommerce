@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,21 +80,22 @@ final class Taxes extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$data = ( $this->source )();
+		$data  = Arr::to_array( ( $this->source )() );
+		$rates = Arr::get_int( $data, 'rates' );
 
-		if ( ! $data['enabled'] ) {
+		if ( ! Arr::get_bool( $data, 'enabled' ) ) {
 			return Result::info( __( 'Tax calculation is turned off.', 'store-audit-for-woocommerce' ) );
 		}
 
-		if ( 0 === $data['rates'] ) {
+		if ( 0 === $rates ) {
 			return Result::warning( __( 'Tax calculation is on, but no tax rates are defined, so no tax is added to orders.', 'store-audit-for-woocommerce' ) );
 		}
 
 		return Result::ok(
 			sprintf(
 				/* translators: %d: number of tax rates. */
-				_n( 'Tax calculation is on with %d tax rate.', 'Tax calculation is on with %d tax rates.', $data['rates'], 'store-audit-for-woocommerce' ),
-				$data['rates']
+				_n( 'Tax calculation is on with %d tax rate.', 'Tax calculation is on with %d tax rates.', $rates, 'store-audit-for-woocommerce' ),
+				$rates
 			)
 		);
 	}
@@ -103,12 +106,12 @@ final class Taxes extends AbstractCheck {
 	 * @return array{enabled:bool,rates:int}
 	 */
 	private function read_taxes(): array {
-		global $wpdb;
 		$enabled = function_exists( 'wc_tax_enabled' ) && wc_tax_enabled();
 		$rates   = 0;
 		if ( $enabled ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$rates = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}woocommerce_tax_rates" );
+			$db = Db::wpdb();
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Cheap COUNT on a small table; there is no WooCommerce API for a bare count.
+			$rates = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $db->prefix . 'woocommerce_tax_rates' ) ) );
 		}
 		return array(
 			'enabled' => $enabled,

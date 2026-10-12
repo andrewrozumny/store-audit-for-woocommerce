@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace StoreAudit\Checks\Plugins;
 
+use StoreAudit\Support\Arr;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -46,11 +48,13 @@ final class PluginInventory {
 			return get_plugins();
 		};
 		$this->active    = $active ?? static function (): array {
-			$files = (array) get_option( 'active_plugins', array() );
+			$files = Arr::to_string_list( get_option( 'active_plugins', array() ) );
 			if ( is_multisite() ) {
-				$files = array_merge( $files, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
+				foreach ( array_keys( Arr::to_array( get_site_option( 'active_sitewide_plugins', array() ) ) ) as $sitewide ) {
+					$files[] = (string) $sitewide;
+				}
 			}
-			return array_values( array_unique( array_map( 'strval', $files ) ) );
+			return array_values( array_unique( $files ) );
 		};
 	}
 
@@ -60,7 +64,13 @@ final class PluginInventory {
 	 * @return array<string,array<string,mixed>>
 	 */
 	public function installed(): array {
-		return ( $this->installed )();
+		$plugins = array();
+		foreach ( Arr::to_array( ( $this->installed )() ) as $file => $data ) {
+			if ( is_string( $file ) && is_array( $data ) ) {
+				$plugins[ $file ] = Arr::to_string_keyed( $data );
+			}
+		}
+		return $plugins;
 	}
 
 	/**
@@ -69,7 +79,7 @@ final class PluginInventory {
 	 * @return list<string>
 	 */
 	public function active(): array {
-		return array_values( ( $this->active )() );
+		return Arr::to_string_list( ( $this->active )() );
 	}
 
 	/**

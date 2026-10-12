@@ -11,6 +11,7 @@ namespace StoreAudit\Admin;
 
 use StoreAudit\Report;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -38,7 +39,8 @@ final class DashboardWidget {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
 			return;
 		}
-		wp_add_dashboard_widget( self::WIDGET_ID, __( 'Store Audit', 'store-audit-for-woocommerce' ), array( $this, 'render' ) );
+		$callback = array( $this, 'render' );
+		wp_add_dashboard_widget( self::WIDGET_ID, __( 'Store Audit', 'store-audit-for-woocommerce' ), $callback );
 	}
 
 	/**
@@ -65,14 +67,18 @@ final class DashboardWidget {
 	/**
 	 * The worst problems first: critical, then warning, then error. Keeps the report order inside a severity.
 	 *
-	 * @param array<int,mixed> $results Result rows from a report.
-	 * @param int              $limit   How many to return.
+	 * @param array<mixed> $results Result rows from a report.
+	 * @param int          $limit   How many to return.
 	 * @return list<array<string,mixed>>
 	 */
 	public static function top_problems( array $results, int $limit = 3 ): array {
 		$rows = array();
 		foreach ( $results as $row ) {
-			if ( is_array( $row ) && in_array( $row['severity'] ?? '', array( Result::CRITICAL, Result::WARNING, Result::ERROR ), true ) ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$row = Arr::to_string_keyed( $row );
+			if ( in_array( $row['severity'] ?? '', array( Result::CRITICAL, Result::WARNING, Result::ERROR ), true ) ) {
 				$rows[] = $row;
 			}
 		}
@@ -95,8 +101,8 @@ final class DashboardWidget {
 			return;
 		}
 
-		$score = is_array( $report['score'] ?? null ) ? (int) ( $report['score']['overall'] ?? 0 ) : 0;
-		$top   = self::top_problems( (array) $report['results'] );
+		$score = Arr::get_int( Arr::get_map( $report, 'score' ), 'overall' );
+		$top   = self::top_problems( Arr::get_array( $report, 'results' ) );
 
 		echo '<div class="sa-widget-score"><span class="sa-widget-number ' . esc_attr( Exports::score_class( $score ) ) . '">' . esc_html( (string) $score ) . '</span>';
 		echo '<span>' . esc_html__( 'out of 100', 'store-audit-for-woocommerce' ) . '</span></div>';
@@ -104,7 +110,7 @@ final class DashboardWidget {
 			sprintf(
 				/* translators: %s: date and time of the last audit. */
 				__( 'Last run: %s', 'store-audit-for-woocommerce' ),
-				Report::local_date( (string) ( $report['generated_at'] ?? '' ) )
+				Report::local_date( Arr::get_string( $report, 'generated_at' ) )
 			)
 		) . '</p>';
 
@@ -113,7 +119,7 @@ final class DashboardWidget {
 		} else {
 			echo '<ul class="sa-widget-list">';
 			foreach ( $top as $row ) {
-				echo '<li class="sa-' . esc_attr( (string) $row['severity'] ) . '"><strong>' . esc_html( (string) ( $row['title'] ?? '' ) ) . '</strong><span>' . esc_html( (string) ( $row['summary'] ?? '' ) ) . '</span></li>';
+				echo '<li class="sa-' . esc_attr( Arr::get_string( $row, 'severity' ) ) . '"><strong>' . esc_html( Arr::get_string( $row, 'title' ) ) . '</strong><span>' . esc_html( Arr::get_string( $row, 'summary' ) ) . '</span></li>';
 			}
 			echo '</ul>';
 		}

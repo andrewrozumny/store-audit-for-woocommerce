@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace StoreAudit;
 
+use StoreAudit\Support\Arr;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -75,14 +77,14 @@ final class Cli {
 		$rows   = array();
 		foreach ( $results as $row ) {
 			$rows[] = array(
-				'section'  => $labels[ $row['section'] ] ?? $row['section'],
-				'severity' => $row['severity'],
-				'title'    => $row['title'],
-				'summary'  => $row['summary'],
+				'section'  => $labels[ Arr::get_string( $row, 'section' ) ] ?? Arr::get_string( $row, 'section' ),
+				'severity' => Arr::get_string( $row, 'severity' ),
+				'title'    => Arr::get_string( $row, 'title' ),
+				'summary'  => Arr::get_string( $row, 'summary' ),
 			);
 		}
 		\WP_CLI\Utils\format_items( 'table', $rows, array( 'section', 'severity', 'title', 'summary' ) );
-		\WP_CLI::log( sprintf( 'Overall score: %d / 100', $report['score']['overall'] ) );
+		\WP_CLI::log( sprintf( 'Overall score: %d / 100', Arr::get_int( Arr::get_map( $report, 'score' ), 'overall' ) ) );
 		\WP_CLI::log( Report::attribution() );
 	}
 }

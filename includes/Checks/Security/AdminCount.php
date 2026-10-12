@@ -68,7 +68,7 @@ final class AdminCount extends AbstractSecurityCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$admins = null !== $this->admins ? (array) call_user_func( $this->admins ) : $this->default_administrators();
+		$admins = null !== $this->admins ? $this->normalise_admins( call_user_func( $this->admins ) ) : $this->default_administrators();
 		$count  = count( $admins );
 
 		if ( $count <= 3 ) {

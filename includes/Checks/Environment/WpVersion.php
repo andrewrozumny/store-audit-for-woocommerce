@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,14 +87,14 @@ final class WpVersion extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		$current = (string) get_bloginfo( 'version' );
+		$current = get_bloginfo( 'version' );
 		$latest  = null;
 		$core    = get_site_transient( 'update_core' );
-		if ( is_object( $core ) && ! empty( $core->last_checked ) && isset( $core->updates ) && is_array( $core->updates ) ) {
+		if ( is_object( $core ) && Arr::to_int( $core->last_checked ?? null ) > 0 && isset( $core->updates ) && is_array( $core->updates ) ) {
 			$latest = $current;
 			foreach ( $core->updates as $offer ) {
-				if ( is_object( $offer ) && isset( $offer->response, $offer->current ) && 'upgrade' === $offer->response && version_compare( (string) $offer->current, $latest, '>' ) ) {
-					$latest = (string) $offer->current;
+				if ( is_object( $offer ) && isset( $offer->response, $offer->current ) && 'upgrade' === $offer->response && version_compare( Arr::to_string( $offer->current ), $latest, '>' ) ) {
+					$latest = Arr::to_string( $offer->current );
 				}
 			}
 		}
@@ -109,8 +110,8 @@ final class WpVersion extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$current = (string) ( $d['current'] ?? '' );
-		$latest  = isset( $d['latest'] ) ? (string) $d['latest'] : null;
+		$current = Arr::get_string( $d, 'current' );
+		$latest  = isset( $d['latest'] ) ? Arr::get_string( $d, 'latest' ) : null;
 
 		if ( null === $latest ) {
 			return Result::info(

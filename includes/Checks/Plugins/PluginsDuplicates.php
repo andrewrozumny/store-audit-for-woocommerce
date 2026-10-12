@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Plugins;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -103,13 +104,29 @@ final class PluginsDuplicates extends AbstractCheck {
 		if ( null !== $this->groups ) {
 			return $this->groups;
 		}
+		$groups = $this->filtered_groups();
+		if ( ! is_array( $groups ) ) {
+			return self::GROUPS;
+		}
+		$clean = array();
+		foreach ( $groups as $label => $slugs ) {
+			if ( is_string( $label ) ) {
+				$clean[ $label ] = Arr::to_string_list( $slugs );
+			}
+		}
+		return $clean;
+	}
+
+	/**
+	 * Run the groups through the public filter. Third-party code may return anything, so the result is untyped.
+	 */
+	private function filtered_groups(): mixed {
 		/**
 		 * Filters the categories of plugins that should not be active together.
 		 *
 		 * @param array<string,list<string>> $groups Category label => plugin slugs.
 		 */
-		$groups = apply_filters( 'store_audit_duplicate_groups', self::GROUPS );
-		return is_array( $groups ) ? $groups : self::GROUPS;
+		return apply_filters( 'store_audit_duplicate_groups', self::GROUPS );
 	}
 
 	/**

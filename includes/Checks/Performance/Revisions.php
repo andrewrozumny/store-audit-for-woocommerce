@@ -13,6 +13,8 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use WP_Post;
+use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -87,9 +89,9 @@ final class Revisions extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		global $wpdb;
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = 'revision'" );
+		$db = Db::wpdb();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit query; WordPress has no API for it.
+		$count = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE post_type = 'revision'", $db->posts ) ) );
 		// phpcs:enable
 
 		$limit = wp_revisions_to_keep( new WP_Post( (object) array( 'post_type' => 'post' ) ) );
@@ -112,8 +114,8 @@ final class Revisions extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$count   = (int) ( $d['count'] ?? 0 );
-		$limit   = (string) ( $d['limit'] ?? '' );
+		$count   = Arr::get_int( $d, 'count' );
+		$limit   = Arr::get_string( $d, 'limit' );
 		$details = array(
 			/* translators: %s: revisions limit. */
 			sprintf( __( 'WP_POST_REVISIONS: %s', 'store-audit-for-woocommerce' ), $limit ),

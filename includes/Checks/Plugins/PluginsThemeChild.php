@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Plugins;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -75,7 +76,7 @@ final class PluginsThemeChild extends AbstractCheck {
 			return array(
 				'template'   => get_template(),
 				'stylesheet' => get_stylesheet(),
-				'name'       => $parent->exists() ? (string) $parent->get( 'Name' ) : get_template(),
+				'name'       => $parent->exists() ? $parent->get( 'Name' ) : get_template(),
 			);
 		};
 		$this->files     = $files ?? array( $this, 'list_files' );
@@ -122,8 +123,10 @@ final class PluginsThemeChild extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$theme  = ( $this->theme )();
-		$parent = $theme['template'];
+		$theme      = Arr::to_array( ( $this->theme )() );
+		$parent     = Arr::get_string( $theme, 'template' );
+		$stylesheet = Arr::get_string( $theme, 'stylesheet' );
+		$theme_name = Arr::get_string( $theme, 'name' );
 
 		$lookup = $this->api->theme( $parent );
 		$origin = WporgApi::FOUND === $lookup['status']
@@ -134,13 +137,13 @@ final class PluginsThemeChild extends AbstractCheck {
 			)
 			: __( 'not listed on wordpress.org', 'store-audit-for-woocommerce' );
 
-		$files  = ( $this->files )( ( $this->directory )() );
+		$files  = Arr::to_array( ( $this->files )( Arr::to_string( ( $this->directory )() ) ) );
 		$edited = array();
 		if ( isset( $files['style.css'] ) ) {
-			$baseline = $files['style.css'];
+			$baseline = Arr::to_int( $files['style.css'] );
 			foreach ( $files as $relative => $mtime ) {
-				if ( 'style.css' !== $relative && $mtime > $baseline + self::TOLERANCE ) {
-					$edited[] = $relative;
+				if ( 'style.css' !== $relative && Arr::to_int( $mtime ) > $baseline + self::TOLERANCE ) {
+					$edited[] = (string) $relative;
 				}
 			}
 			sort( $edited );
@@ -150,7 +153,7 @@ final class PluginsThemeChild extends AbstractCheck {
 			$shown = array_slice( $edited, 0, self::MAX_FILES );
 			if ( count( $edited ) > self::MAX_FILES ) {
 				$shown[] = sprintf(
-					/* translators: %d: number of files not shown. */
+					/* translators: %d: number of items not shown. */
 					__( 'and %d more', 'store-audit-for-woocommerce' ),
 					count( $edited ) - self::MAX_FILES
 				);
@@ -159,7 +162,7 @@ final class PluginsThemeChild extends AbstractCheck {
 				sprintf(
 					/* translators: 1: theme name, 2: number of files, 3: where the theme comes from. */
 					_n( 'The files of the parent theme "%1$s" look edited (%2$d file is newer than the theme; %3$s).', 'The files of the parent theme "%1$s" look edited (%2$d files are newer than the theme; %3$s).', count( $edited ), 'store-audit-for-woocommerce' ),
-					$theme['name'],
+					$theme_name,
 					count( $edited ),
 					$origin
 				),
@@ -167,12 +170,12 @@ final class PluginsThemeChild extends AbstractCheck {
 			);
 		}
 
-		if ( $theme['template'] === $theme['stylesheet'] ) {
+		if ( $parent === $stylesheet ) {
 			return Result::info(
 				sprintf(
 					/* translators: 1: theme name, 2: where the theme comes from. */
 					__( 'The active theme "%1$s" is used without a child theme (%2$s). Updates of the theme will overwrite any edits; a child theme keeps them.', 'store-audit-for-woocommerce' ),
-					$theme['name'],
+					$theme_name,
 					$origin
 				)
 			);
@@ -182,7 +185,7 @@ final class PluginsThemeChild extends AbstractCheck {
 			sprintf(
 				/* translators: 1: theme name, 2: where the theme comes from. */
 				__( 'A child theme is active and the parent theme "%1$s" looks unedited (%2$s).', 'store-audit-for-woocommerce' ),
-				$theme['name'],
+				$theme_name,
 				$origin
 			)
 		);

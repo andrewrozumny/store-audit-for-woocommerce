@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -85,15 +86,17 @@ final class Hpos extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$data = ( $this->source )();
+		$data = Arr::to_array( ( $this->source )() );
+		$hpos = Arr::get_bool( $data, 'hpos' );
+		$sync = Arr::get_bool( $data, 'sync' );
 
-		if ( $data['hpos'] && $data['sync'] ) {
+		if ( $hpos && $sync ) {
 			return Result::info( __( 'High-performance order storage is on and sync with the old storage is also on. Sync doubles the writes and can be turned off after migration.', 'store-audit-for-woocommerce' ) );
 		}
-		if ( $data['hpos'] ) {
+		if ( $hpos ) {
 			return Result::ok( __( 'High-performance order storage is on and sync is off.', 'store-audit-for-woocommerce' ) );
 		}
-		if ( $data['sync'] ) {
+		if ( $sync ) {
 			return Result::info( __( 'Orders still use the old storage (posts table) and sync to the modern order tables is on.', 'store-audit-for-woocommerce' ) );
 		}
 		return Result::info( __( 'Orders use the old storage (posts table). The modern, faster order storage is off.', 'store-audit-for-woocommerce' ) );

@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -88,7 +89,7 @@ final class MaxExecutionTime extends AbstractCheck {
 	private function collect(): array {
 		$value = ini_get( 'max_execution_time' );
 		return array(
-			'seconds' => false === $value ? 0 : (int) $value,
+			'seconds' => (int) $value,
 			'cli'     => 'cli' === PHP_SAPI,
 		);
 	}
@@ -99,10 +100,10 @@ final class MaxExecutionTime extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$seconds = (int) ( $d['seconds'] ?? 0 );
+		$seconds = Arr::get_int( $d, 'seconds' );
 
 		if ( 0 === $seconds ) {
-			$summary = ! empty( $d['cli'] )
+			$summary = Arr::get_bool( $d, 'cli' )
 				? __( 'No time limit is set (this audit runs from the command line, which is always unlimited, so the web limit was not measured).', 'store-audit-for-woocommerce' )
 				: __( 'No time limit is set.', 'store-audit-for-woocommerce' );
 			return Result::ok( $summary );

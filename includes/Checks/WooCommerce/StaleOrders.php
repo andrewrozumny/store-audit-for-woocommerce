@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,8 +79,10 @@ final class StaleOrders extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$data  = ( $this->source )();
-		$total = $data['pending'] + $data['failed'];
+		$data    = Arr::to_array( ( $this->source )() );
+		$pending = Arr::get_int( $data, 'pending' );
+		$failed  = Arr::get_int( $data, 'failed' );
+		$total   = $pending + $failed;
 
 		if ( 0 === $total ) {
 			return Result::ok( __( 'No pending or failed orders older than 30 days.', 'store-audit-for-woocommerce' ) );
@@ -89,23 +92,23 @@ final class StaleOrders extends AbstractCheck {
 			/* translators: 1: total orders, 2: pending orders, 3: failed orders. */
 			_n( '%1$d order is older than 30 days (%2$d pending, %3$d failed).', '%1$d orders are older than 30 days (%2$d pending, %3$d failed).', $total, 'store-audit-for-woocommerce' ),
 			$total,
-			$data['pending'],
-			$data['failed']
+			$pending,
+			$failed
 		);
 		$details = array(
 			sprintf(
 				/* translators: %d: number of orders. */
 				__( 'Pending for over 30 days: %d', 'store-audit-for-woocommerce' ),
-				$data['pending']
+				$pending
 			),
 			sprintf(
 				/* translators: %d: number of orders. */
 				__( 'Failed for over 30 days: %d', 'store-audit-for-woocommerce' ),
-				$data['failed']
+				$failed
 			),
 		);
 
-		return $total > 500 || $data['pending'] > 500 || $data['failed'] > 500
+		return $total > 500 || $pending > 500 || $failed > 500
 			? Result::warning( $summary, $details )
 			: Result::info( $summary, $details );
 	}
@@ -131,7 +134,7 @@ final class StaleOrders extends AbstractCheck {
 					'return'       => 'ids',
 				)
 			);
-			$out[ $status ] = is_object( $result ) && isset( $result->total ) ? (int) $result->total : 0;
+			$out[ $status ] = is_object( $result ) && isset( $result->total ) ? Arr::to_int( $result->total ) : 0;
 		}
 		return $out;
 	}

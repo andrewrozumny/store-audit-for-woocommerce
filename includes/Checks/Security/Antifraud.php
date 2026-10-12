@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -90,15 +91,14 @@ final class Antifraud extends AbstractSecurityCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$plugins = null !== $this->active ? (array) call_user_func( $this->active ) : $this->active_plugins();
+		$plugins = null !== $this->active ? Arr::to_string_list( call_user_func( $this->active ) ) : $this->active_plugins();
 		$slugs   = array();
 		foreach ( $plugins as $basename ) {
-			$slug = explode( '/', (string) $basename )[0];
+			$slug = explode( '/', $basename )[0];
 			$slugs[ preg_replace( '/\.php$/', '', $slug ) ?? $slug ] = true;
 		}
 
-		$known = apply_filters( 'store_audit_antifraud_plugins', self::KNOWN );
-		$known = is_array( $known ) ? array_map( 'strval', $known ) : self::KNOWN;
+		$known = $this->known_slugs();
 		$hits  = array_values( array_filter( $known, static fn ( string $slug ): bool => isset( $slugs[ $slug ] ) ) );
 
 		if ( array() !== $hits ) {
@@ -120,10 +120,29 @@ final class Antifraud extends AbstractSecurityCheck {
 	 * @return list<string>
 	 */
 	private function active_plugins(): array {
-		$active = array_map( 'strval', (array) get_option( 'active_plugins', array() ) );
+		$active = Arr::to_string_list( get_option( 'active_plugins', array() ) );
 		if ( is_multisite() ) {
-			$active = array_merge( $active, array_map( 'strval', array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) ) );
+			foreach ( array_keys( Arr::to_array( get_site_option( 'active_sitewide_plugins', array() ) ) ) as $sitewide ) {
+				$active[] = (string) $sitewide;
+			}
 		}
-		return array_values( $active );
+		return $active;
+	}
+
+	/**
+	 * Plugin slugs that count as protection, after the public filter. Third-party code may return anything.
+	 *
+	 * @return list<string>
+	 */
+	private function known_slugs(): array {
+		$known = $this->filtered_slugs();
+		return is_array( $known ) ? array_values( array_map( static fn( mixed $slug ): string => Arr::to_string( $slug ), $known ) ) : self::KNOWN;
+	}
+
+	/**
+	 * Run the slugs through the public filter. The result is untyped on purpose.
+	 */
+	private function filtered_slugs(): mixed {
+		return apply_filters( 'store_audit_antifraud_plugins', self::KNOWN );
 	}
 }

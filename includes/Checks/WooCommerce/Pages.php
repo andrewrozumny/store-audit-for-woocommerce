@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -80,19 +81,16 @@ final class Pages extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$pages    = ( $this->source )();
+		$pages    = Arr::to_array( ( $this->source )() );
 		$critical = false;
 		$lines    = array();
 
 		foreach ( self::PAGES as $key ) {
-			$page   = $pages[ $key ] ?? array(
-				'id'     => 0,
-				'status' => '',
-			);
+			$page   = Arr::get_map( $pages, $key );
 			$label  = $this->label( $key );
-			$status = $page['status'];
+			$status = Arr::get_string( $page, 'status' );
 
-			if ( $page['id'] <= 0 ) {
+			if ( Arr::get_int( $page, 'id' ) <= 0 ) {
 				$lines[] = sprintf(
 					/* translators: %s: page name. */
 					__( '%s: no page assigned', 'store-audit-for-woocommerce' ),
@@ -154,11 +152,11 @@ final class Pages extends AbstractCheck {
 	private function read_pages(): array {
 		$out = array();
 		foreach ( self::PAGES as $key ) {
-			$id     = (int) wc_get_page_id( $key );
+			$id     = wc_get_page_id( $key );
 			$status = '';
 			if ( $id > 0 ) {
 				$post   = get_post( $id );
-				$status = $post instanceof \WP_Post ? (string) $post->post_status : '';
+				$status = $post instanceof \WP_Post ? $post->post_status : '';
 			}
 			$out[ $key ] = array(
 				'id'     => $id,

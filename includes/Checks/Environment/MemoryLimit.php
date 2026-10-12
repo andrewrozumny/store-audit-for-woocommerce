@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Environment;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -86,11 +87,11 @@ final class MemoryLimit extends AbstractCheck {
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		$wp  = defined( 'WP_MEMORY_LIMIT' ) ? wp_convert_hr_to_bytes( (string) WP_MEMORY_LIMIT ) : 0;
+		$wp  = defined( 'WP_MEMORY_LIMIT' ) ? wp_convert_hr_to_bytes( Arr::to_string( constant( 'WP_MEMORY_LIMIT' ) ) ) : 0;
 		$ini = ini_get( 'memory_limit' );
 		return array(
 			'wp'  => $wp,
-			'php' => false === $ini ? null : wp_convert_hr_to_bytes( $ini ),
+			'php' => wp_convert_hr_to_bytes( $ini ),
 		);
 	}
 
@@ -100,8 +101,8 @@ final class MemoryLimit extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$wp  = (int) ( $d['wp'] ?? 0 );
-		$php = isset( $d['php'] ) ? (int) $d['php'] : null;
+		$wp  = Arr::get_int( $d, 'wp' );
+		$php = isset( $d['php'] ) ? Arr::get_int( $d, 'php' ) : null;
 
 		$describe = function ( ?int $bytes ): string {
 			if ( null === $bytes ) {

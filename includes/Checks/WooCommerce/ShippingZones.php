@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -78,21 +79,23 @@ final class ShippingZones extends AbstractCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$data = ( $this->source )();
+		$data  = Arr::to_array( ( $this->source )() );
+		$zones = Arr::get_array( $data, 'zones' );
 
-		if ( ! $data['enabled'] ) {
+		if ( ! Arr::get_bool( $data, 'enabled' ) ) {
 			return Result::info( __( 'Shipping is turned off in WooCommerce.', 'store-audit-for-woocommerce' ) );
 		}
 
 		$empty = array();
-		foreach ( $data['zones'] as $zone ) {
-			if ( 0 === $zone['methods'] ) {
-				$empty[] = $zone['name'];
+		foreach ( $zones as $zone ) {
+			$zone = Arr::to_string_keyed( $zone );
+			if ( 0 === ( $zone['methods'] ?? null ) ) {
+				$empty[] = Arr::get_string( $zone, 'name' );
 			}
 		}
 
 		if ( array() !== $empty ) {
-			if ( $data['fallback'] && ! $data['sells_shippable'] ) {
+			if ( Arr::get_bool( $data, 'fallback' ) && ! Arr::get_bool( $data, 'sells_shippable' ) ) {
 				return Result::info( __( 'No shipping zones are set up (no products that need shipping were found).', 'store-audit-for-woocommerce' ) );
 			}
 			return Result::warning(
@@ -108,8 +111,8 @@ final class ShippingZones extends AbstractCheck {
 		return Result::ok(
 			sprintf(
 				/* translators: %d: number of zones. */
-				_n( 'Every shipping zone (%d) has at least one shipping method.', 'Every shipping zone (%d) has at least one shipping method.', count( $data['zones'] ), 'store-audit-for-woocommerce' ),
-				count( $data['zones'] )
+				_n( 'Every shipping zone (%d) has at least one shipping method.', 'Every shipping zone (%d) has at least one shipping method.', count( $zones ), 'store-audit-for-woocommerce' ),
+				count( $zones )
 			)
 		);
 	}
@@ -121,10 +124,11 @@ final class ShippingZones extends AbstractCheck {
 	 */
 	private function read_zones(): array {
 		$zones = array();
-		foreach ( \WC_Shipping_Zones::get_zones() as $zone ) {
+		foreach ( \WC_Shipping_Zones::get_zones() as $raw_zone ) {
+			$zone    = Arr::to_string_keyed( $raw_zone );
 			$zones[] = array(
-				'name'    => (string) $zone['zone_name'],
-				'methods' => $this->count_enabled( (array) $zone['shipping_methods'] ),
+				'name'    => Arr::get_string( $zone, 'zone_name' ),
+				'methods' => $this->count_enabled( Arr::get_array( $zone, 'shipping_methods' ) ),
 			);
 		}
 

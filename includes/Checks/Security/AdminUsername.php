@@ -77,15 +77,16 @@ final class AdminUsername extends AbstractSecurityCheck {
 	 * Run.
 	 */
 	public function run(): Result {
-		$admins = null !== $this->admins ? (array) call_user_func( $this->admins ) : $this->default_administrators();
+		$admins = null !== $this->admins ? $this->normalise_admins( call_user_func( $this->admins ) ) : $this->default_administrators();
 
 		$critical = array();
 		$warnings = array();
 		foreach ( array( 'admin', 'administrator' ) as $login ) {
-			$user = null !== $this->lookup ? call_user_func( $this->lookup, $login ) : $this->default_user_by_login( $login );
-			if ( ! is_array( $user ) ) {
+			$found = null !== $this->lookup ? call_user_func( $this->lookup, $login ) : $this->default_user_by_login( $login );
+			if ( ! is_array( $found ) ) {
 				continue;
 			}
+			$user = $this->normalise_admin_row( $found );
 			if ( in_array( 'administrator', $user['roles'], true ) ) {
 				$critical[] = $user['login'];
 			} else {

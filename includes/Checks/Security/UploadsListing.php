@@ -53,7 +53,7 @@ final class UploadsListing extends AbstractProbeCheck {
 	 */
 	public function run(): Result {
 		$upload = wp_upload_dir( null, false );
-		$base   = isset( $upload['baseurl'] ) ? (string) $upload['baseurl'] : '';
+		$base   = $upload['baseurl'];
 		if ( '' === $base ) {
 			return Result::info( __( 'The uploads folder address is unknown, so this check was skipped.', 'store-audit-for-woocommerce' ) );
 		}

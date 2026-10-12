@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -84,12 +85,12 @@ final class BackupsInWebroot extends AbstractSecurityCheck {
 	public function run(): Result {
 		$root = $this->root;
 		if ( null === $root ) {
-			$root = (string) ABSPATH;
+			$root = Arr::to_string( ABSPATH );
 		}
 		$uploads = $this->uploads;
 		if ( null === $uploads ) {
 			$info    = wp_upload_dir( null, false );
-			$uploads = isset( $info['basedir'] ) ? (string) $info['basedir'] : '';
+			$uploads = $info['basedir'];
 		}
 
 		$budget = self::MAX_ENTRIES;

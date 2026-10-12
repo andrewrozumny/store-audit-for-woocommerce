@@ -31,8 +31,7 @@ final class Runner {
 			wp_raise_memory_limit( 'admin' );
 		}
 		if ( function_exists( 'set_time_limit' ) ) {
-			// Silenced on purpose: may be disabled by the host.
-			@set_time_limit( 30 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,Squiz.PHP.DiscouragedFunctions.Discouraged
+			@set_time_limit( 30 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,Squiz.PHP.DiscouragedFunctions.Discouraged -- Silenced on purpose: the host may disable the function.
 		}
 
 		$start = microtime( true );

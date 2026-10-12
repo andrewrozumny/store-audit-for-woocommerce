@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -101,7 +102,7 @@ final class Generator extends AbstractProbeCheck {
 		if ( is_object( $updates ) && isset( $updates->updates ) && is_array( $updates->updates ) ) {
 			foreach ( $updates->updates as $update ) {
 				if ( is_object( $update ) && isset( $update->response, $update->current ) && 'upgrade' === $update->response ) {
-					return (string) $update->current;
+					return Arr::to_string( $update->current );
 				}
 			}
 		}

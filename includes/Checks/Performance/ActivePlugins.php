@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -100,8 +101,8 @@ final class ActivePlugins extends AbstractCheck {
 	 * @param array<string,mixed> $d Data.
 	 */
 	private function evaluate( array $d ): Result {
-		$active  = (int) ( $d['active'] ?? 0 );
-		$network = (int) ( $d['network'] ?? 0 );
+		$active  = Arr::get_int( $d, 'active' );
+		$network = Arr::get_int( $d, 'network' );
 		$total   = $active + $network;
 		$summary = sprintf(
 			/* translators: %d: number of plugins. */

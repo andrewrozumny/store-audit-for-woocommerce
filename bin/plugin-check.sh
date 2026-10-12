@@ -12,7 +12,7 @@ SLUG="store-audit-for-woocommerce"
 
 # Dev-only paths that are listed in .distignore and do not ship.
 EXCLUDE_DIRS="vendor,tests,bin,docs,assets-src,.wordpress-org,dist,node_modules,.git,.github"
-EXCLUDE_FILES="composer.json,composer.lock,phpcs.xml.dist,phpstan.neon.dist,phpunit.xml.dist,.distignore,.gitignore,.gitattributes,.editorconfig,README.md,CHANGELOG.md,.phpunit.result.cache"
+EXCLUDE_FILES="composer.json,composer.lock,phpcs.xml.dist,phpstan.neon.dist,psalm.xml.dist,phpunit.xml.dist,.distignore,.gitignore,.gitattributes,.editorconfig,README.md,CHANGELOG.md,.phpunit.result.cache"
 
 out_file="$(mktemp)"
 trap 'rm -f "$out_file"' EXIT

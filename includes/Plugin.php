@@ -1,0 +1,103 @@
+<?php
+/**
+ * Plugin bootstrap.
+ *
+ * @package StoreAudit
+ */
+
+declare(strict_types=1);
+
+namespace StoreAudit;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Main plugin class.
+ */
+final class Plugin {
+
+	/**
+	 * Singleton instance.
+	 *
+	 * @var Plugin|null
+	 */
+	private static ?Plugin $instance = null;
+
+	/**
+	 * Whether boot() already ran.
+	 *
+	 * @var bool
+	 */
+	private bool $booted = false;
+
+	/**
+	 * Get the instance.
+	 */
+	public static function instance(): Plugin {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * Private constructor.
+	 */
+	private function __construct() {
+	}
+
+	/**
+	 * Whether the Pro layer is active. Free build always returns false unless filtered.
+	 */
+	public static function is_pro(): bool {
+		return (bool) apply_filters( 'store_audit_is_pro', false );
+	}
+
+	/**
+	 * Hook everything up.
+	 */
+	public function boot(): void {
+		if ( $this->booted ) {
+			return;
+		}
+		$this->booted = true;
+
+		if ( ! $this->woocommerce_active() ) {
+			add_action( 'admin_notices', array( $this, 'missing_woocommerce_notice' ) );
+			return;
+		}
+
+		( new Admin\Page() )->register();
+		( new Ajax() )->register();
+
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			Cli::register();
+		}
+	}
+
+	/**
+	 * Whether WooCommerce is loaded or active.
+	 */
+	private function woocommerce_active(): bool {
+		if ( class_exists( 'WooCommerce' ) ) {
+			return true;
+		}
+		$active = (array) get_option( 'active_plugins', array() );
+		return in_array( 'woocommerce/woocommerce.php', $active, true );
+	}
+
+	/**
+	 * Admin notice when WooCommerce is missing.
+	 */
+	public function missing_woocommerce_notice(): void {
+		if ( ! current_user_can( 'activate_plugins' ) ) {
+			return;
+		}
+		printf(
+			'<div class="notice notice-error"><p>%s</p></div>',
+			esc_html__( 'Store Audit for WooCommerce needs WooCommerce to be installed and active.', 'store-audit-for-woocommerce' )
+		);
+	}
+}

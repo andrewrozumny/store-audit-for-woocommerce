@@ -26,6 +26,13 @@ final class Provider {
 	 * @return list<CheckInterface>
 	 */
 	public static function checks(): array {
-		return array();
+		return array(
+			new PluginsInactive(),
+			new PluginsUpdates(),
+			new PluginsAbandoned(),
+			new PluginsDuplicates(),
+			new PluginsThemeChild(),
+			new PluginsMu(),
+		);
 	}
 }

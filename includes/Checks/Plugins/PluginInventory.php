@@ -1,0 +1,85 @@
+<?php
+/**
+ * Installed and active plugins, injectable for tests.
+ *
+ * @package StoreAudit
+ */
+
+declare(strict_types=1);
+
+namespace StoreAudit\Checks\Plugins;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Reads the plugin list from WordPress.
+ */
+final class PluginInventory {
+
+	/**
+	 * Installed plugins keyed by file.
+	 *
+	 * @var callable
+	 */
+	private $installed;
+
+	/**
+	 * Active plugin files.
+	 *
+	 * @var callable
+	 */
+	private $active;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param callable|null $installed Returns array<string,array<string,mixed>> like get_plugins().
+	 * @param callable|null $active    Returns list of active plugin files.
+	 */
+	public function __construct( ?callable $installed = null, ?callable $active = null ) {
+		$this->installed = $installed ?? static function (): array {
+			if ( ! function_exists( 'get_plugins' ) ) {
+				throw new \RuntimeException( 'The WordPress plugin functions are not loaded.' );
+			}
+			return get_plugins();
+		};
+		$this->active    = $active ?? static function (): array {
+			$files = (array) get_option( 'active_plugins', array() );
+			if ( is_multisite() ) {
+				$files = array_merge( $files, array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) );
+			}
+			return array_values( array_unique( array_map( 'strval', $files ) ) );
+		};
+	}
+
+	/**
+	 * Installed plugins keyed by file.
+	 *
+	 * @return array<string,array<string,mixed>>
+	 */
+	public function installed(): array {
+		return ( $this->installed )();
+	}
+
+	/**
+	 * Active plugin files.
+	 *
+	 * @return list<string>
+	 */
+	public function active(): array {
+		return array_values( ( $this->active )() );
+	}
+
+	/**
+	 * Display name of a plugin file.
+	 *
+	 * @param array<string,array<string,mixed>> $installed Installed plugins.
+	 * @param string                            $file      Plugin file.
+	 */
+	public static function name_of( array $installed, string $file ): string {
+		$name = $installed[ $file ]['Name'] ?? '';
+		return is_string( $name ) && '' !== $name ? $name : $file;
+	}
+}

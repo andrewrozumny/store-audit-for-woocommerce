@@ -28,7 +28,15 @@ final class Provider {
 	public static function checks(): array {
 		return array(
 			new PhpVersion(),
+			new WpVersion(),
+			new WcVersion(),
 			new WpDebug(),
+			new Https(),
+			new FileEditing(),
+			new MemoryLimit(),
+			new MaxExecutionTime(),
+			new Cron(),
+			new ObjectCache(),
 		);
 	}
 }

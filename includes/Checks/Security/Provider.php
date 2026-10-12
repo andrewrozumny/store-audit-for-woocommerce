@@ -26,6 +26,20 @@ final class Provider {
 	 * @return list<CheckInterface>
 	 */
 	public static function checks(): array {
-		return array();
+		return array(
+			new AdminUsername(),
+			new AdminCount(),
+			new InactiveAdmins(),
+			new Xmlrpc(),
+			new RestUsers(),
+			new Generator(),
+			new UploadsListing(),
+			new WpConfigHttp(),
+			new ReadmeLicense(),
+			new ExposedDotfiles(),
+			new BackupsInWebroot(),
+			new Antifraud(),
+			new SslAdmin(),
+		);
 	}
 }

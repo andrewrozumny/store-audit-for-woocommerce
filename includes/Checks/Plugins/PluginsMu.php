@@ -1,0 +1,180 @@
+<?php
+/**
+ * Must-use plugins check.
+ *
+ * @package StoreAudit
+ */
+
+declare(strict_types=1);
+
+namespace StoreAudit\Checks\Plugins;
+
+use StoreAudit\Checks\AbstractCheck;
+use StoreAudit\Checks\Section;
+use StoreAudit\Result;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Must-use plugins load silently, so forgotten ones are easy to miss.
+ */
+final class PluginsMu extends AbstractCheck {
+
+	/**
+	 * Entries: array<string,array{name:string,mtime:int}> keyed by file name.
+	 *
+	 * @var callable
+	 */
+	private $source;
+
+	/**
+	 * Current unix time.
+	 *
+	 * @var int
+	 */
+	private int $now;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param callable|null $source Data source override for tests.
+	 * @param int|null      $now    Current unix time override for tests.
+	 */
+	public function __construct( ?callable $source = null, ?int $now = null ) {
+		$this->source = $source ?? array( $this, 'read_mu_plugins' );
+		$this->now    = $now ?? time();
+	}
+
+	/**
+	 * Check id.
+	 */
+	public function id(): string {
+		return 'plugins_mu';
+	}
+
+	/**
+	 * Section.
+	 */
+	public function section(): string {
+		return Section::PLUGINS;
+	}
+
+	/**
+	 * Title.
+	 */
+	public function title(): string {
+		return __( 'Must-use plugins', 'store-audit-for-woocommerce' );
+	}
+
+	/**
+	 * Explanation.
+	 */
+	public function explanation(): string {
+		return __( 'Must-use plugins are loaded automatically and cannot be switched off from the Plugins screen. Hosts and developers use them, but old forgotten ones keep running unnoticed and may no longer be maintained.', 'store-audit-for-woocommerce' );
+	}
+
+	/**
+	 * Fix hint.
+	 */
+	public function fix_hint(): string {
+		return __( 'Ask your developer or host what each old must-use plugin does, and remove the ones that are not needed.', 'store-audit-for-woocommerce' );
+	}
+
+	/**
+	 * Run.
+	 */
+	public function run(): Result {
+		$items = ( $this->source )();
+		if ( array() === $items ) {
+			return Result::ok( __( 'No must-use plugins are installed.', 'store-audit-for-woocommerce' ) );
+		}
+
+		$cutoff = strtotime( '-2 years', $this->now );
+		$lines  = array();
+		$old    = 0;
+		foreach ( $items as $file => $item ) {
+			if ( $item['mtime'] > 0 && $item['mtime'] < $cutoff ) {
+				++$old;
+				$lines[] = sprintf(
+					/* translators: 1: plugin name, 2: file name, 3: date. */
+					__( '%1$s (%2$s): file last changed %3$s, old must-use plugin, check if still needed', 'store-audit-for-woocommerce' ),
+					$item['name'],
+					$file,
+					gmdate( 'j M Y', $item['mtime'] )
+				);
+			} else {
+				$lines[] = sprintf(
+					/* translators: 1: plugin name, 2: file name. */
+					__( '%1$s (%2$s)', 'store-audit-for-woocommerce' ),
+					$item['name'],
+					$file
+				);
+			}
+		}
+
+		if ( $old > 0 ) {
+			return Result::warning(
+				sprintf(
+					/* translators: 1: number of old must-use plugins, 2: total number. */
+					__( '%1$d of %2$d must-use plugins have not been touched for over 2 years.', 'store-audit-for-woocommerce' ),
+					$old,
+					count( $items )
+				),
+				DetailList::cap( $lines )
+			);
+		}
+
+		return Result::info(
+			sprintf(
+				/* translators: %d: number of must-use plugins. */
+				_n( '%d must-use plugin is installed.', '%d must-use plugins are installed.', count( $items ), 'store-audit-for-woocommerce' ),
+				count( $items )
+			),
+			DetailList::cap( $lines )
+		);
+	}
+
+	/**
+	 * Read must-use plugins from WordPress and the mu-plugins directory.
+	 *
+	 * @return array<string,array{name:string,mtime:int}>
+	 * @throws \RuntimeException When the plugin functions are not loaded.
+	 */
+	private function read_mu_plugins(): array {
+		if ( ! function_exists( 'get_mu_plugins' ) ) {
+			throw new \RuntimeException( 'The WordPress plugin functions are not loaded.' );
+		}
+		$out = array();
+		$dir = defined( 'WPMU_PLUGIN_DIR' ) ? rtrim( (string) WPMU_PLUGIN_DIR, '/\\' ) : '';
+
+		foreach ( get_mu_plugins() as $file => $data ) {
+			$name = isset( $data['Name'] ) && is_string( $data['Name'] ) && '' !== $data['Name'] ? $data['Name'] : (string) $file;
+			$time = '' !== $dir && file_exists( $dir . '/' . $file ) ? filemtime( $dir . '/' . $file ) : 0;
+
+			$out[ (string) $file ] = array(
+				'name'  => $name,
+				'mtime' => false === $time ? 0 : $time,
+			);
+		}
+
+		// Also list loose PHP files that get_mu_plugins() may skip (no plugin header).
+		if ( '' !== $dir && is_dir( $dir ) ) {
+			$found = glob( $dir . '/*.php' );
+			foreach ( false === $found ? array() : $found as $path ) {
+				$file = basename( $path );
+				if ( ! isset( $out[ $file ] ) ) {
+					$time         = filemtime( $path );
+					$out[ $file ] = array(
+						'name'  => $file,
+						'mtime' => false === $time ? 0 : $time,
+					);
+				}
+			}
+		}
+
+		ksort( $out );
+		return $out;
+	}
+}

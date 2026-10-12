@@ -43,13 +43,19 @@ final class RegistryTest extends TestCase {
 			}
 		);
 
+		$builtin = count( \StoreAudit\Checks\Environment\Provider::checks() )
+			+ count( \StoreAudit\Checks\Plugins\Provider::checks() )
+			+ count( \StoreAudit\Checks\WooCommerce\Provider::checks() )
+			+ count( \StoreAudit\Checks\Security\Provider::checks() )
+			+ count( \StoreAudit\Checks\Performance\Provider::checks() );
+
 		$all = Registry::all();
 
 		$this->assertArrayHasKey( 'plugins_fake', $all );
 		foreach ( $all as $check ) {
 			$this->assertInstanceOf( \StoreAudit\Checks\CheckInterface::class, $check );
 		}
-		$this->assertSame( 3, count( $all ) );
+		$this->assertSame( $builtin + 1, count( $all ) );
 	}
 
 	/**

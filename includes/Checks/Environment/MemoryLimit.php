@@ -1,0 +1,149 @@
+<?php
+/**
+ * Memory limit check.
+ *
+ * @package StoreAudit
+ */
+
+declare(strict_types=1);
+
+namespace StoreAudit\Checks\Environment;
+
+use StoreAudit\Checks\AbstractCheck;
+use StoreAudit\Checks\Section;
+use StoreAudit\Result;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Memory limit.
+ */
+final class MemoryLimit extends AbstractCheck {
+
+	/**
+	 * Data to evaluate (tests) or null to read the live site.
+	 *
+	 * @var array<string,mixed>|null
+	 */
+	private ?array $data;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param array<string,mixed>|null $data Pre-collected data for tests; null reads the live site.
+	 */
+	public function __construct( ?array $data = null ) {
+		$this->data = $data;
+	}
+
+	/**
+	 * Check id.
+	 */
+	public function id(): string {
+		return 'environment_memory_limit';
+	}
+
+	/**
+	 * Section.
+	 */
+	public function section(): string {
+		return Section::ENVIRONMENT;
+	}
+
+	/**
+	 * Title.
+	 */
+	public function title(): string {
+		return __( 'Memory limit', 'store-audit-for-woocommerce' );
+	}
+
+	/**
+	 * Explanation.
+	 */
+	public function explanation(): string {
+		return __( 'Memory is the working space PHP gets for each page load. A store with too little hits blank pages and failed checkouts, especially with many plugins or big imports.', 'store-audit-for-woocommerce' );
+	}
+
+	/**
+	 * Fix hint.
+	 */
+	public function fix_hint(): string {
+		return __( 'Ask your host to raise the PHP memory limit to at least 256M, or set WP_MEMORY_LIMIT in wp-config.php.', 'store-audit-for-woocommerce' );
+	}
+
+	/**
+	 * Run.
+	 */
+	public function run(): Result {
+		return $this->evaluate( $this->data ?? $this->collect() );
+	}
+
+	/**
+	 * Read the live site.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function collect(): array {
+		$wp  = defined( 'WP_MEMORY_LIMIT' ) ? wp_convert_hr_to_bytes( (string) WP_MEMORY_LIMIT ) : 0;
+		$ini = ini_get( 'memory_limit' );
+		return array(
+			'wp'  => $wp,
+			'php' => false === $ini ? null : wp_convert_hr_to_bytes( $ini ),
+		);
+	}
+
+	/**
+	 * Turn data into a result.
+	 *
+	 * @param array<string,mixed> $d Data.
+	 */
+	private function evaluate( array $d ): Result {
+		$wp  = (int) ( $d['wp'] ?? 0 );
+		$php = isset( $d['php'] ) ? (int) $d['php'] : null;
+
+		$describe = function ( ?int $bytes ): string {
+			if ( null === $bytes ) {
+				return __( 'unknown', 'store-audit-for-woocommerce' );
+			}
+			return -1 === $bytes ? __( 'unlimited', 'store-audit-for-woocommerce' ) : $this->format_bytes( $bytes );
+		};
+
+		$details = array(
+			/* translators: %s: memory size. */
+			sprintf( __( 'WP_MEMORY_LIMIT: %s', 'store-audit-for-woocommerce' ), $describe( $wp ) ),
+			/* translators: %s: memory size. */
+			sprintf( __( 'PHP memory_limit: %s', 'store-audit-for-woocommerce' ), $describe( $php ) ),
+		);
+
+		if ( -1 === $wp || -1 === $php ) {
+			return Result::ok( __( 'Memory is not limited.', 'store-audit-for-woocommerce' ), $details );
+		}
+
+		// What a page load really gets is the higher of the two values.
+		$effective = max( $wp, (int) $php );
+
+		if ( $effective < 134217728 ) {
+			return Result::critical(
+				/* translators: %s: memory size. */
+				sprintf( __( 'Only %s of memory is available to PHP, too little for WooCommerce.', 'store-audit-for-woocommerce' ), $this->format_bytes( $effective ) ),
+				$details
+			);
+		}
+
+		if ( $effective < 268435456 ) {
+			return Result::warning(
+				/* translators: %s: memory size. */
+				sprintf( __( '%s of memory is available to PHP, 256M or more is recommended for a store.', 'store-audit-for-woocommerce' ), $this->format_bytes( $effective ) ),
+				$details
+			);
+		}
+
+		return Result::ok(
+			/* translators: %s: memory size. */
+			sprintf( __( '%s of memory is available to PHP.', 'store-audit-for-woocommerce' ), $this->format_bytes( $effective ) ),
+			$details
+		);
+	}
+}

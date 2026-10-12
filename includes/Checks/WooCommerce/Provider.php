@@ -26,6 +26,18 @@ final class Provider {
 	 * @return list<CheckInterface>
 	 */
 	public static function checks(): array {
-		return array();
+		return array(
+			new GuestCheckout(),
+			new TestGateways(),
+			new Taxes(),
+			new ShippingZones(),
+			new Pages(),
+			new TermsPage(),
+			new Hpos(),
+			new NegativeStock(),
+			new StaleOrders(),
+			new Webhooks(),
+			new ApiKeys(),
+		);
 	}
 }

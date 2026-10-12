@@ -101,6 +101,6 @@ final class WpDebug extends AbstractCheck {
 			return Result::critical( __( 'Debug mode is on and errors are shown on the screen of a live site.', 'store-audit-for-woocommerce' ) );
 		}
 
-		return Result::warning( __( 'Debug mode is on on a live site (errors are hidden from visitors but still logged).', 'store-audit-for-woocommerce' ) );
+		return Result::warning( __( 'Debug mode is enabled on a live site. Errors are hidden from visitors but still logged.', 'store-audit-for-woocommerce' ) );
 	}
 }

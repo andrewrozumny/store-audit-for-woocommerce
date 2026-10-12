@@ -35,7 +35,7 @@ final class SelfProbeTest extends ProbeTestCase {
 		$this->assertSame( 0, $args['redirection'] );
 		$this->assertSame( array(), $args['cookies'] );
 		$this->assertSame( 100, $args['limit_response_size'] );
-		$this->assertSame( 'StoreAudit/0.1.0', $args['user-agent'] );
+		$this->assertSame( 'StoreAudit/' . STORE_AUDIT_VERSION, $args['user-agent'] );
 		$this->assertArrayNotHasKey( 'sslverify', $args );
 	}
 

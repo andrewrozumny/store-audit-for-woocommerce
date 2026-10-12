@@ -4,7 +4,9 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.1] - 2026-10-12
+
+Hardening release before the WordPress.org submission.
 
 ### Security
 - The audit, the exports (JSON, print, Markdown), the menu page and the Dashboard widget need the `manage_options` capability. A shop manager no longer sees them.
@@ -26,10 +28,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - Shipping zones: the "sells a shippable product" probe is one indexed LIMIT 1 query instead of a catalogue-wide product query. Starting and finishing a run read and clear the stored results with a few queries instead of one per check. The negative stock check loads the product titles with one cache priming call.
 
 ### Fixed
-- Uninstall removes only the rows the plugin created, by exact name (the two options, the run rows and the cached wordpress.org answers with their timeout rows), and walks a network in batches of 100 sites.
+- Uninstall removes every row the plugin created and nothing else, by exact name (the two options, the run rows and the cached wordpress.org answers with their timeout rows), on every site of a multisite network in batches of 100 sites. 0.1.0 left the run rows and the cached answers behind.
 - The theme check skips a folder it cannot read instead of failing.
 - The audit screen shows the "report could not be built" text when the last step fails, not the "could not be started" text.
-- Uninstall now removes every row the plugin created: the run rows, the cached wordpress.org answers with their timeout rows, and the same on every site of a multisite network.
 - Results of an audit run are stored one option per check, so checks saved by overlapping requests no longer overwrite each other.
 - Finishing a run in which some checks did not run lists them as "not checked" and keeps them out of the score; a run with no results at all no longer replaces the last report.
 - A stored report that is damaged (wrong types, unknown severity, no rows) is repaired or ignored instead of reaching the page, the exports and the dashboard widget.

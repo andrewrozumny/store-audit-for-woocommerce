@@ -3,8 +3,9 @@
  * Plugin Name:       Store Audit for WooCommerce
  * Plugin URI:        https://helpmybiz.org
  * Description:       A read-only audit of your WooCommerce store: one button, a clear report on security, settings, performance and environment.
- * Version:           0.1.0
+ * Version:           0.1.1
  * Requires at least: 6.6
+ * Tested up to:      7.1
  * Requires PHP:      8.1
  * Requires Plugins:  woocommerce
  * WC requires at least: 9.0
@@ -25,7 +26,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'STORE_AUDIT_VERSION', '0.1.0' );
+define( 'STORE_AUDIT_VERSION', '0.1.1' );
 define( 'STORE_AUDIT_FILE', __FILE__ );
 define( 'STORE_AUDIT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'STORE_AUDIT_URL', plugin_dir_url( __FILE__ ) );

@@ -147,22 +147,43 @@ final class ShippingZones extends AbstractCheck {
 			);
 		}
 
-		$shippable = wc_get_products(
-			array(
-				'status'       => 'publish',
-				'virtual'      => false,
-				'downloadable' => false,
-				'limit'        => 1,
-				'return'       => 'ids',
-			)
-		);
-
 		return array(
 			'enabled'         => wc_shipping_enabled(),
-			'sells_shippable' => is_array( $shippable ) && array() !== $shippable,
+			'sells_shippable' => self::has_shippable_product(),
 			'fallback'        => $fallback,
 			'zones'           => $zones,
 		);
+	}
+
+	/**
+	 * Whether at least one published product needs shipping (not virtual, not downloadable). One indexed LIMIT 1 query:
+	 * the product lookup table when it exists, else the postmeta flags. wc_get_products() ran a WP_Query with a filesort
+	 * over the whole catalogue for the same answer.
+	 */
+	public static function has_shippable_product(): bool {
+		$db = Db::wpdb();
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only existence probe on indexed columns; there is no WooCommerce API without a full WP_Query.
+		$lookup = $db->prefix . 'wc_product_meta_lookup';
+		if ( Db::table_exists( $lookup ) ) {
+			$found = $db->get_var(
+				$db->prepare(
+					"SELECT l.product_id FROM %i l INNER JOIN %i p ON p.ID = l.product_id WHERE l.virtual = 0 AND l.downloadable = 0 AND p.post_type = 'product' AND p.post_status = 'publish' LIMIT 1",
+					$lookup,
+					$db->posts
+				)
+			);
+		} else {
+			$found = $db->get_var(
+				$db->prepare(
+					"SELECT p.ID FROM %i p INNER JOIN %i v ON v.post_id = p.ID AND v.meta_key = '_virtual' AND v.meta_value = 'no' INNER JOIN %i d ON d.post_id = p.ID AND d.meta_key = '_downloadable' AND d.meta_value = 'no' WHERE p.post_type = 'product' AND p.post_status = 'publish' LIMIT 1",
+					$db->posts,
+					$db->postmeta,
+					$db->postmeta
+				)
+			);
+		}
+		// phpcs:enable
+		return null !== $found && '' !== $found && '0' !== $found;
 	}
 
 	/**

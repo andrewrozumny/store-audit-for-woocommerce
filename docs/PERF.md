@@ -5,8 +5,7 @@ PHP limits. This document records what that looks like on a big shop at the tigh
 `max_execution_time=30`), and where the plugin could be cheaper.
 
 Short version: every step finished, nothing timed out, nothing ran out of memory, the slowest step took about 2 s, and the plugin adds
-at most 5 MB on top of what WordPress and WooCommerce already use. Four things in the plugin's own queries are worth tightening; none is a failure.
-See "Findings" below.
+at most 5 MB on top of what WordPress and WooCommerce already use. Three things in the plugin's own queries were tightened after this run showed them (see "Findings" below); one is left open.
 
 ## Conditions
 
@@ -55,7 +54,7 @@ Integrity is checked after generation with `wc_get_order()` and `wc_get_product(
 <!-- perf:results:start -->
 **Result: 0 timeouts at 30 s, 0 memory errors at 128M, 0 errors in 110 measured steps.**
 
-Environment: PHP 8.4.26, MySQL 8.4.11 (InnoDB buffer pool 128 MB), WordPress 7.1.3, WooCommerce 11.2.1. Plugin zip b291e6ee8cff. Run time 251 s.
+Environment: PHP 8.4.26, MySQL 8.4.11 (InnoDB buffer pool 128 MB), WordPress 7.1.3, WooCommerce 11.2.1. Plugin zip 487bc5b47638. Run time 175 s.
 
 ### HPOS on (orders in the dedicated tables)
 
@@ -63,67 +62,67 @@ Data set: 10,000 products, 2,976 variations, 50,024 orders, 173,002 order items,
 
 | Step | Time ms | Handler ms | Peak MB | Over boot MB | Queries | SQL ms | Slowest query ms | Full scans | N+1 shapes |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| boot (WordPress + admin) | 503 |  | 81 |  | 0 |  |  | 0 | 0 |
-| start | 599 | 38 | 79 | 3.3 | 51 | 4.9 | 0.99 | 0 | 1 |
-| check environment_php_version | 459 | 18 | 79 | 3.4 | 3 | 0.1 | 0.08 | 0 | 0 |
-| check environment_wp_version | 435 | 16 | 79 | 3.4 | 4 | 0.2 | 0.09 | 0 | 0 |
-| check environment_wc_version | 433 | 14 | 79 | 3.4 | 4 | 0.3 | 0.14 | 0 | 0 |
-| check environment_wp_debug | 720 | 22 | 79 | 3.4 | 3 | 0.2 | 0.09 | 0 | 0 |
-| check environment_https | 591 | 15 | 79 | 3.4 | 3 | 0.3 | 0.21 | 0 | 0 |
-| check environment_file_editing | 498 | 20 | 79 | 3.4 | 3 | 0.3 | 0.2 | 0 | 0 |
-| check environment_memory_limit | 463 | 16 | 79 | 3.4 | 3 | 0.1 | 0.08 | 0 | 0 |
-| check environment_max_execution_time | 609 | 23 | 79 | 3.4 | 3 | 0.2 | 0.1 | 0 | 0 |
-| check environment_cron | 589 | 22 | 79 | 3.5 | 5 | 2 | 0.76 | 0 | 0 |
-| check environment_object_cache | 492 | 37 | 79 | 3.5 | 6 | 8.3 | 4.98 | 0 | 0 |
-| check plugins_inactive | 497 | 23 | 79 | 3.5 | 3 | 1.1 | 0.54 | 0 | 0 |
-| check plugins_updates | 607 | 30 | 79 | 3.5 | 5 | 1.6 | 0.64 | 0 | 0 |
-| check plugins_abandoned | 2139 | 1349 | 81 | 4.1 | 10 | 1.4 | 0.53 | 0 | 0 |
-| check plugins_duplicates | 402 | 16 | 79 | 3.5 | 3 | 0.2 | 0.17 | 0 | 0 |
-| check plugins_theme_child | 922 | 503 | 79 | 3.9 | 6 | 2.2 | 1.33 | 0 | 0 |
-| check plugins_mu | 566 | 24 | 79 | 3.4 | 3 | 1.3 | 0.7 | 0 | 0 |
-| check woocommerce_guest_checkout | 440 | 17 | 79 | 3.4 | 6 | 0.3 | 0.08 | 0 | 0 |
-| check woocommerce_test_gateways | 512 | 33 | 79 | 3.8 | 5 | 1.8 | 0.96 | 0 | 0 |
-| check woocommerce_taxes | 595 | 24 | 79 | 3.4 | 3 | 0.2 | 0.16 | 0 | 0 |
-| check woocommerce_shipping_zones | 829 | 207 | 79 | 3.5 | 11 | 116 | 112.72 | 0 | 0 |
-| check woocommerce_pages | 498 | 18 | 79 | 3.5 | 9 | 2.2 | 0.67 | 0 | 0 |
-| check woocommerce_terms_page | 691 | 25 | 79 | 3.4 | 4 | 0.2 | 0.08 | 0 | 0 |
-| check woocommerce_hpos | 638 | 44 | 79 | 3.4 | 3 | 0.3 | 0.22 | 0 | 0 |
-| check woocommerce_negative_stock | 626 | 25 | 79 | 3.5 | 26 | 5 | 1.89 | 0 | 1 |
-| check woocommerce_stale_orders | 774 | 68 | 79 | 3.9 | 7 | 9.1 | 3.82 | 0 | 0 |
-| check woocommerce_webhooks | 550 | 19 | 79 | 3.4 | 5 | 2.6 | 1.84 | 0 | 0 |
-| check woocommerce_api_keys | 418 | 15 | 79 | 3.4 | 5 | 2.6 | 1.13 | 0 | 0 |
-| check security_admin_username | 666 | 25 | 79 | 3.5 | 7 | 2.2 | 0.59 | 0 | 0 |
-| check security_admin_count | 595 | 18 | 79 | 3.5 | 6 | 3.5 | 1.44 | 0 | 0 |
-| check security_inactive_admins | 471 | 15 | 79 | 3.5 | 6 | 2.4 | 0.86 | 0 | 0 |
-| check security_xmlrpc | 1026 | 399 | 79 | 3.9 | 3 | 1.2 | 0.5 | 0 | 0 |
-| check security_rest_users | 1008 | 454 | 79 | 3.9 | 3 | 2 | 1.28 | 0 | 0 |
-| check security_generator | 1056 | 462 | 81 | 4.1 | 4 | 1.5 | 0.75 | 0 | 0 |
-| check security_uploads_listing | 506 | 18 | 79 | 3.9 | 3 | 1.6 | 0.81 | 0 | 0 |
-| check security_wp_config_http | 1242 | 553 | 79 | 3.9 | 3 | 1.4 | 0.54 | 0 | 0 |
-| check security_readme_license | 590 | 21 | 79 | 3.9 | 3 | 1.4 | 0.72 | 0 | 0 |
-| check security_exposed_dotfiles | 1986 | 1391 | 79 | 3.9 | 3 | 4 | 2.95 | 0 | 0 |
-| check security_backups_in_webroot | 1789 | 1190 | 81 | 4.9 | 3 | 1.9 | 0.86 | 0 | 0 |
-| check security_antifraud | 498 | 18 | 79 | 3.5 | 3 | 0.1 | 0.07 | 0 | 0 |
-| check security_ssl_admin | 594 | 24 | 79 | 3.4 | 3 | 0.2 | 0.16 | 0 | 0 |
-| check performance_catalog_size | 581 | 28 | 79 | 3.5 | 5 | 3.8 | 1.4 | 0 | 0 |
-| check performance_orders_storage | 498 | 30 | 79 | 3.5 | 5 | 8 | 5.64 | 0 | 0 |
-| check performance_table_sizes | 674 | 30 | 79 | 3.5 | 4 | 0.6 | 0.48 | 0 | 0 |
-| check performance_autoload | 574 | 22 | 79 | 3.5 | 5 | 4.2 | 1.57 | 0 | 0 |
-| check performance_expired_transients | 461 | 32 | 79 | 3.5 | 4 | 10.3 | 9.14 | 1 | 0 |
-| check performance_revisions | 650 | 32 | 79 | 3.5 | 4 | 4.1 | 2.72 | 0 | 0 |
-| check performance_active_plugins | 584 | 14 | 79 | 3.5 | 3 | 0.3 | 0.25 | 0 | 0 |
-| check performance_heartbeat | 490 | 15 | 79 | 3.4 | 3 | 0.5 | 0.44 | 0 | 0 |
-| check performance_images | 613 | 55 | 79 | 3.8 | 4 | 11.5 | 10.21 | 0 | 0 |
-| finish | 583 | 48 | 79 | 3.6 | 153 | 17.4 | 1.7 | 0 | 3 |
-| markdown (copy button) | 458 | 4 | 79 | 2.4 | 1 | 0.1 | 0.12 | 0 | 0 |
-| export JSON | 1002 | 3 | 83 | 2.9 | 1 | 0.1 | 0.11 | 0 | 0 |
-| export printable HTML | 532 | 4 | 83 | 2.5 | 1 | 0.2 | 0.2 | 0 | 0 |
+| boot (WordPress + admin) | 653 |  | 81 |  | 0 |  |  | 0 | 0 |
+| start | 654 | 20 | 79 | 3.2 | 3 | 1.3 | 0.58 | 0 | 0 |
+| check environment_php_version | 474 | 19 | 79 | 3.4 | 3 | 0.2 | 0.14 | 0 | 0 |
+| check environment_wp_version | 703 | 25 | 79 | 3.4 | 4 | 0.3 | 0.12 | 0 | 0 |
+| check environment_wc_version | 636 | 17 | 79 | 3.4 | 4 | 0.2 | 0.07 | 0 | 0 |
+| check environment_wp_debug | 624 | 24 | 79 | 3.4 | 3 | 0.2 | 0.12 | 0 | 0 |
+| check environment_https | 604 | 26 | 79 | 3.4 | 3 | 0.2 | 0.12 | 0 | 0 |
+| check environment_file_editing | 437 | 15 | 79 | 3.4 | 3 | 0.3 | 0.21 | 0 | 0 |
+| check environment_memory_limit | 427 | 23 | 79 | 3.5 | 3 | 0.2 | 0.17 | 0 | 0 |
+| check environment_max_execution_time | 584 | 18 | 79 | 3.4 | 3 | 0.3 | 0.23 | 0 | 0 |
+| check environment_cron | 423 | 21 | 79 | 3.5 | 5 | 1.8 | 0.71 | 0 | 0 |
+| check environment_object_cache | 442 | 28 | 79 | 3.5 | 6 | 9.4 | 5.55 | 0 | 0 |
+| check plugins_inactive | 618 | 24 | 79 | 3.5 | 3 | 2.1 | 1.1 | 0 | 0 |
+| check plugins_updates | 411 | 16 | 79 | 3.5 | 5 | 1.7 | 0.73 | 0 | 0 |
+| check plugins_abandoned | 2007 | 1367 | 81 | 4.1 | 9 | 1.8 | 0.63 | 0 | 0 |
+| check plugins_duplicates | 636 | 29 | 79 | 3.5 | 3 | 1.9 | 1.03 | 0 | 0 |
+| check plugins_theme_child | 953 | 504 | 79 | 3.9 | 5 | 1.6 | 0.69 | 0 | 0 |
+| check plugins_mu | 553 | 20 | 79 | 3.5 | 3 | 0.3 | 0.18 | 0 | 0 |
+| check woocommerce_guest_checkout | 664 | 22 | 79 | 3.5 | 6 | 0.7 | 0.23 | 0 | 0 |
+| check woocommerce_test_gateways | 471 | 19 | 79 | 3.8 | 5 | 1.5 | 0.76 | 0 | 0 |
+| check woocommerce_taxes | 405 | 14 | 79 | 3.4 | 3 | 0.1 | 0.08 | 0 | 0 |
+| check woocommerce_shipping_zones | 462 | 18 | 79 | 3.5 | 10 | 2.1 | 0.58 | 0 | 0 |
+| check woocommerce_pages | 684 | 25 | 79 | 3.5 | 9 | 2.3 | 0.8 | 0 | 0 |
+| check woocommerce_terms_page | 514 | 15 | 79 | 3.4 | 4 | 0.2 | 0.11 | 0 | 0 |
+| check woocommerce_hpos | 421 | 13 | 79 | 3.4 | 3 | 1.2 | 0.63 | 0 | 0 |
+| check woocommerce_negative_stock | 449 | 27 | 79 | 3.5 | 7 | 3.2 | 1.37 | 0 | 0 |
+| check woocommerce_stale_orders | 668 | 46 | 79 | 3.9 | 7 | 9.3 | 3.79 | 0 | 0 |
+| check woocommerce_webhooks | 670 | 20 | 79 | 3.5 | 5 | 1.8 | 0.54 | 0 | 0 |
+| check woocommerce_api_keys | 504 | 16 | 79 | 3.5 | 5 | 0.8 | 0.54 | 0 | 0 |
+| check security_admin_username | 394 | 15 | 79 | 3.5 | 7 | 1.3 | 0.64 | 0 | 0 |
+| check security_admin_count | 400 | 15 | 79 | 3.5 | 6 | 2.4 | 0.74 | 0 | 0 |
+| check security_inactive_admins | 695 | 28 | 79 | 3.5 | 6 | 0.9 | 0.55 | 0 | 0 |
+| check security_xmlrpc | 826 | 255 | 79 | 3.9 | 3 | 1 | 0.46 | 0 | 0 |
+| check security_rest_users | 884 | 401 | 79 | 3.9 | 3 | 2.2 | 1.04 | 0 | 0 |
+| check security_generator | 1134 | 454 | 81 | 4.1 | 4 | 1.9 | 0.91 | 0 | 0 |
+| check security_uploads_listing | 640 | 23 | 79 | 3.9 | 3 | 1.8 | 0.82 | 0 | 0 |
+| check security_wp_config_http | 1262 | 492 | 79 | 3.9 | 3 | 1.2 | 0.54 | 0 | 0 |
+| check security_readme_license | 657 | 37 | 79 | 3.9 | 3 | 0.2 | 0.14 | 0 | 0 |
+| check security_exposed_dotfiles | 2068 | 1342 | 79 | 3.9 | 3 | 1.4 | 0.72 | 0 | 0 |
+| check security_backups_in_webroot | 1718 | 1108 | 81 | 4.9 | 3 | 1.7 | 0.83 | 0 | 0 |
+| check security_antifraud | 482 | 18 | 79 | 3.5 | 3 | 0.1 | 0.07 | 0 | 0 |
+| check security_ssl_admin | 484 | 14 | 79 | 3.4 | 3 | 0.2 | 0.13 | 0 | 0 |
+| check performance_catalog_size | 545 | 18 | 79 | 3.5 | 5 | 4.2 | 1.51 | 0 | 0 |
+| check performance_orders_storage | 698 | 42 | 79 | 3.5 | 5 | 6.7 | 4.89 | 0 | 0 |
+| check performance_table_sizes | 452 | 15 | 79 | 3.5 | 4 | 0.7 | 0.58 | 0 | 0 |
+| check performance_autoload | 426 | 17 | 79 | 3.5 | 5 | 3.1 | 1.65 | 0 | 0 |
+| check performance_expired_transients | 480 | 34 | 79 | 3.5 | 4 | 10 | 8.84 | 1 | 0 |
+| check performance_revisions | 405 | 20 | 79 | 3.5 | 4 | 4.5 | 2.53 | 0 | 0 |
+| check performance_active_plugins | 433 | 15 | 79 | 3.5 | 3 | 0.1 | 0.07 | 0 | 0 |
+| check performance_heartbeat | 414 | 13 | 79 | 3.4 | 3 | 0.1 | 0.08 | 0 | 0 |
+| check performance_images | 441 | 37 | 79 | 3.8 | 4 | 10.2 | 9.03 | 0 | 0 |
+| finish | 655 | 34 | 83 | 6.3 | 10 | 4.9 | 1.68 | 0 | 0 |
+| markdown (copy button) | 634 | 4 | 79 | 2.4 | 1 | 0.1 | 0.1 | 0 | 0 |
+| export JSON | 1179 | 4 | 83 | 2.9 | 1 | 0.1 | 0.11 | 0 | 0 |
+| export printable HTML | 765 | 4 | 83 | 2.5 | 1 | 0.1 | 0.12 | 0 | 0 |
 
 Nothing over 5 s, and no step adds more than 64 MB on top of the boot baseline.
 
-Slowest step: check plugins_abandoned, 2.14 s. Highest peak: export JSON, 83 MB. WordPress with WooCommerce and the admin includes alone (boot): 81 MB, 0.50 s. Whole pass: 76 s.
+Slowest step: check security_exposed_dotfiles, 2.07 s. Highest peak: finish, 83 MB. WordPress with WooCommerce and the admin includes alone (boot): 81 MB, 0.65 s. Whole pass: 76 s.
 
-Largest tables: wp_woocommerce_order_itemmeta 1,516,051 rows (164 MB), wp_postmeta 293,714 rows (61 MB), wp_woocommerce_order_items 172,437 rows (17 MB), wp_posts 112,267 rows (72 MB), wp_wc_order_addresses 99,459 rows (26 MB), wp_wc_orders_meta 99,327 rows (33 MB), wp_options 54,216 rows (16 MB), wp_wc_order_operational_data 49,742 rows (11 MB).
+Largest tables: wp_woocommerce_order_itemmeta 1,515,775 rows (164 MB), wp_postmeta 292,639 rows (61 MB), wp_woocommerce_order_items 172,437 rows (17 MB), wp_posts 106,525 rows (72 MB), wp_wc_order_addresses 99,459 rows (26 MB), wp_wc_orders_meta 99,327 rows (33 MB), wp_wc_order_operational_data 49,742 rows (11 MB), wp_wc_orders 49,437 rows (35 MB).
 
 ### HPOS off (orders in posts and postmeta, sync off)
 
@@ -131,83 +130,67 @@ Data set: 10,000 products, 2,976 variations, 50,024 orders, 173,002 order items,
 
 | Step | Time ms | Handler ms | Peak MB | Over boot MB | Queries | SQL ms | Slowest query ms | Full scans | N+1 shapes |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| boot (WordPress + admin) | 456 |  | 81 |  | 0 |  |  | 0 | 0 |
-| start | 676 | 30 | 79 | 3.3 | 51 | 5.7 | 0.91 | 0 | 1 |
-| check environment_php_version | 486 | 16 | 79 | 3.4 | 3 | 0.2 | 0.16 | 0 | 0 |
-| check environment_wp_version | 421 | 14 | 79 | 3.4 | 4 | 0.3 | 0.14 | 0 | 0 |
-| check environment_wc_version | 705 | 22 | 79 | 3.4 | 4 | 0.2 | 0.09 | 0 | 0 |
-| check environment_wp_debug | 604 | 16 | 79 | 3.4 | 3 | 0.2 | 0.11 | 0 | 0 |
-| check environment_https | 464 | 14 | 79 | 3.4 | 3 | 0.3 | 0.19 | 0 | 0 |
-| check environment_file_editing | 678 | 28 | 79 | 3.4 | 3 | 0.2 | 0.11 | 0 | 0 |
-| check environment_memory_limit | 576 | 20 | 79 | 3.4 | 3 | 0.1 | 0.07 | 0 | 0 |
-| check environment_max_execution_time | 451 | 14 | 79 | 3.4 | 3 | 1.2 | 0.59 | 0 | 0 |
-| check environment_cron | 612 | 22 | 79 | 3.5 | 5 | 0.9 | 0.59 | 0 | 0 |
-| check environment_object_cache | 646 | 30 | 79 | 3.5 | 5 | 7.3 | 4.65 | 0 | 0 |
-| check plugins_inactive | 464 | 21 | 79 | 3.5 | 3 | 1.3 | 0.56 | 0 | 0 |
-| check plugins_updates | 604 | 30 | 79 | 3.5 | 5 | 0.4 | 0.12 | 0 | 0 |
-| check plugins_abandoned | 1940 | 1355 | 81 | 4.1 | 9 | 1.6 | 0.79 | 0 | 0 |
-| check plugins_duplicates | 607 | 27 | 79 | 3.5 | 3 | 1.4 | 0.76 | 0 | 0 |
-| check plugins_theme_child | 1046 | 514 | 79 | 3.9 | 5 | 1.7 | 0.79 | 0 | 0 |
-| check plugins_mu | 401 | 15 | 79 | 3.4 | 3 | 1.2 | 0.51 | 0 | 0 |
-| check woocommerce_guest_checkout | 720 | 26 | 79 | 3.4 | 6 | 0.4 | 0.1 | 0 | 0 |
-| check woocommerce_test_gateways | 586 | 21 | 79 | 3.8 | 5 | 0.4 | 0.15 | 0 | 0 |
-| check woocommerce_taxes | 421 | 13 | 79 | 3.4 | 3 | 0.2 | 0.13 | 0 | 0 |
-| check woocommerce_shipping_zones | 838 | 216 | 79 | 3.5 | 11 | 120.8 | 117.27 | 0 | 0 |
-| check woocommerce_pages | 460 | 15 | 79 | 3.5 | 9 | 0.7 | 0.17 | 0 | 0 |
-| check woocommerce_terms_page | 394 | 14 | 79 | 3.4 | 4 | 0.3 | 0.13 | 0 | 0 |
-| check woocommerce_hpos | 687 | 38 | 79 | 3.4 | 3 | 0.2 | 0.12 | 0 | 0 |
-| check woocommerce_negative_stock | 547 | 22 | 79 | 3.5 | 26 | 5.2 | 1.53 | 0 | 1 |
-| check woocommerce_stale_orders | 497 | 50 | 79 | 3.5 | 7 | 6.9 | 3.4 | 0 | 0 |
-| check woocommerce_webhooks | 652 | 23 | 79 | 3.4 | 5 | 0.8 | 0.48 | 0 | 0 |
-| check woocommerce_api_keys | 567 | 20 | 79 | 3.4 | 5 | 3 | 1.12 | 0 | 0 |
-| check security_admin_username | 472 | 16 | 79 | 3.5 | 7 | 1.2 | 0.59 | 0 | 0 |
-| check security_admin_count | 459 | 28 | 79 | 3.5 | 6 | 2.3 | 0.64 | 0 | 0 |
-| check security_inactive_admins | 615 | 22 | 79 | 3.5 | 6 | 2.7 | 0.79 | 0 | 0 |
-| check security_xmlrpc | 728 | 322 | 79 | 3.9 | 3 | 1.8 | 0.87 | 0 | 0 |
-| check security_rest_users | 1284 | 699 | 79 | 3.9 | 3 | 1.3 | 0.59 | 0 | 0 |
-| check security_generator | 920 | 372 | 79 | 4.0 | 4 | 1.7 | 0.8 | 0 | 0 |
-| check security_uploads_listing | 700 | 31 | 79 | 3.8 | 3 | 1.7 | 0.78 | 0 | 0 |
-| check security_wp_config_http | 1074 | 407 | 79 | 3.8 | 3 | 1.4 | 0.68 | 0 | 0 |
-| check security_readme_license | 752 | 35 | 79 | 3.8 | 3 | 1.6 | 0.7 | 0 | 0 |
-| check security_exposed_dotfiles | 1424 | 771 | 79 | 3.9 | 3 | 1.7 | 0.82 | 0 | 0 |
-| check security_backups_in_webroot | 1579 | 1010 | 81 | 4.9 | 3 | 1.7 | 0.79 | 0 | 0 |
-| check security_antifraud | 789 | 30 | 79 | 3.5 | 3 | 0.2 | 0.13 | 0 | 0 |
-| check security_ssl_admin | 630 | 28 | 79 | 3.4 | 3 | 0.2 | 0.14 | 0 | 0 |
-| check performance_catalog_size | 569 | 31 | 79 | 3.5 | 5 | 3.2 | 1.43 | 0 | 0 |
-| check performance_orders_storage | 659 | 32 | 79 | 3.5 | 4 | 9.7 | 5.17 | 0 | 0 |
-| check performance_table_sizes | 610 | 25 | 79 | 3.5 | 4 | 0.9 | 0.78 | 0 | 0 |
-| check performance_autoload | 454 | 21 | 79 | 3.5 | 5 | 3.4 | 1.78 | 0 | 0 |
-| check performance_expired_transients | 679 | 60 | 79 | 3.5 | 4 | 11.6 | 9.94 | 1 | 0 |
-| check performance_revisions | 591 | 26 | 79 | 3.5 | 4 | 4.6 | 2.8 | 0 | 0 |
-| check performance_active_plugins | 405 | 14 | 79 | 3.5 | 3 | 0.2 | 0.11 | 0 | 0 |
-| check performance_heartbeat | 690 | 22 | 79 | 3.4 | 3 | 0.2 | 0.08 | 0 | 0 |
-| check performance_images | 656 | 52 | 79 | 3.8 | 4 | 10.8 | 9.56 | 0 | 0 |
-| finish | 483 | 33 | 79 | 3.6 | 153 | 20.5 | 1.31 | 0 | 3 |
-| markdown (copy button) | 680 | 5 | 79 | 2.4 | 1 | 0.2 | 0.15 | 0 | 0 |
-| export JSON | 1105 | 4 | 83 | 2.9 | 1 | 0.1 | 0.09 | 0 | 0 |
-| export printable HTML | 491 | 5 | 83 | 2.5 | 1 | 0.1 | 0.1 | 0 | 0 |
+| boot (WordPress + admin) | 461 |  | 81 |  | 0 |  |  | 0 | 0 |
+| start | 627 | 25 | 79 | 3.2 | 3 | 1.2 | 0.57 | 0 | 0 |
+| check environment_php_version | 532 | 19 | 79 | 3.4 | 3 | 0.2 | 0.12 | 0 | 0 |
+| check environment_wp_version | 426 | 14 | 79 | 3.4 | 4 | 0.3 | 0.18 | 0 | 0 |
+| check environment_wc_version | 501 | 23 | 79 | 3.4 | 4 | 0.4 | 0.21 | 0 | 0 |
+| check environment_wp_debug | 662 | 18 | 79 | 3.4 | 3 | 0.3 | 0.19 | 0 | 0 |
+| check environment_https | 508 | 17 | 79 | 3.4 | 3 | 0.2 | 0.09 | 0 | 0 |
+| check environment_file_editing | 403 | 15 | 79 | 3.4 | 3 | 0.2 | 0.1 | 0 | 0 |
+| check environment_memory_limit | 626 | 25 | 79 | 3.5 | 3 | 0.4 | 0.29 | 0 | 0 |
+| check environment_max_execution_time | 454 | 17 | 79 | 3.4 | 3 | 0.2 | 0.18 | 0 | 0 |
+| check environment_cron | 417 | 15 | 79 | 3.5 | 5 | 2.3 | 0.95 | 0 | 0 |
+| check environment_object_cache | 681 | 37 | 79 | 3.5 | 5 | 8.4 | 4.86 | 0 | 0 |
+| check plugins_inactive | 811 | 26 | 79 | 3.5 | 3 | 1.3 | 0.52 | 0 | 0 |
+| check plugins_updates | 540 | 19 | 79 | 3.5 | 5 | 2.2 | 0.86 | 0 | 0 |
+| check plugins_abandoned | 1746 | 1307 | 81 | 4.1 | 9 | 1.9 | 0.74 | 0 | 0 |
+| check plugins_duplicates | 440 | 20 | 79 | 3.5 | 3 | 0.1 | 0.08 | 0 | 0 |
+| check plugins_theme_child | 1165 | 514 | 79 | 3.9 | 5 | 1.5 | 0.61 | 0 | 0 |
+| check plugins_mu | 592 | 17 | 79 | 3.5 | 3 | 1.5 | 0.67 | 0 | 0 |
+| check woocommerce_guest_checkout | 444 | 15 | 79 | 3.5 | 6 | 0.6 | 0.25 | 0 | 0 |
+| check woocommerce_test_gateways | 652 | 28 | 79 | 3.8 | 5 | 2.2 | 0.9 | 0 | 0 |
+| check woocommerce_taxes | 520 | 18 | 79 | 3.4 | 3 | 0.2 | 0.19 | 0 | 0 |
+| check woocommerce_shipping_zones | 435 | 20 | 79 | 3.5 | 10 | 3.4 | 0.79 | 0 | 0 |
+| check woocommerce_pages | 648 | 22 | 79 | 3.5 | 9 | 2.2 | 0.78 | 0 | 0 |
+| check woocommerce_terms_page | 511 | 15 | 79 | 3.4 | 4 | 0.3 | 0.12 | 0 | 0 |
+| check woocommerce_hpos | 422 | 14 | 79 | 3.4 | 3 | 0.3 | 0.21 | 0 | 0 |
+| check woocommerce_negative_stock | 569 | 36 | 79 | 3.5 | 7 | 3.3 | 1.59 | 0 | 0 |
+| check woocommerce_stale_orders | 708 | 68 | 79 | 3.5 | 7 | 6.6 | 3.26 | 0 | 0 |
+| check woocommerce_webhooks | 516 | 21 | 79 | 3.5 | 5 | 1.8 | 0.71 | 0 | 0 |
+| check woocommerce_api_keys | 415 | 15 | 79 | 3.5 | 5 | 1.9 | 0.77 | 0 | 0 |
+| check security_admin_username | 568 | 24 | 79 | 3.5 | 7 | 1.1 | 0.62 | 0 | 0 |
+| check security_admin_count | 545 | 20 | 79 | 3.5 | 6 | 1 | 0.53 | 0 | 0 |
+| check security_inactive_admins | 428 | 16 | 79 | 3.5 | 6 | 0.8 | 0.47 | 0 | 0 |
+| check security_xmlrpc | 873 | 401 | 79 | 3.9 | 3 | 1.7 | 0.81 | 0 | 0 |
+| check security_rest_users | 1034 | 490 | 79 | 3.9 | 3 | 1.4 | 0.73 | 0 | 0 |
+| check security_generator | 1146 | 536 | 79 | 4.0 | 4 | 1.7 | 0.81 | 0 | 0 |
+| check security_uploads_listing | 649 | 23 | 79 | 3.9 | 3 | 0.3 | 0.21 | 0 | 0 |
+| check security_wp_config_http | 1046 | 443 | 79 | 3.8 | 3 | 1.9 | 1.11 | 0 | 0 |
+| check security_readme_license | 723 | 37 | 79 | 3.9 | 3 | 2.1 | 1.02 | 0 | 0 |
+| check security_exposed_dotfiles | 1906 | 1235 | 79 | 3.9 | 3 | 1.6 | 0.76 | 0 | 0 |
+| check security_backups_in_webroot | 1934 | 1262 | 81 | 4.9 | 3 | 1.9 | 0.91 | 0 | 0 |
+| check security_antifraud | 605 | 22 | 79 | 3.5 | 3 | 0.2 | 0.09 | 0 | 0 |
+| check security_ssl_admin | 630 | 30 | 79 | 3.4 | 3 | 0.3 | 0.17 | 0 | 0 |
+| check performance_catalog_size | 794 | 29 | 79 | 3.5 | 5 | 3.5 | 1.42 | 0 | 0 |
+| check performance_orders_storage | 473 | 25 | 79 | 3.5 | 4 | 5.7 | 4.53 | 0 | 0 |
+| check performance_table_sizes | 413 | 15 | 79 | 3.5 | 4 | 0.7 | 0.57 | 0 | 0 |
+| check performance_autoload | 440 | 17 | 79 | 3.5 | 5 | 3.1 | 1.64 | 0 | 0 |
+| check performance_expired_transients | 714 | 45 | 79 | 3.5 | 4 | 11.8 | 10.33 | 1 | 0 |
+| check performance_revisions | 573 | 22 | 79 | 3.5 | 4 | 4.5 | 2.73 | 0 | 0 |
+| check performance_active_plugins | 486 | 15 | 79 | 3.5 | 3 | 0.1 | 0.08 | 0 | 0 |
+| check performance_heartbeat | 455 | 16 | 79 | 3.4 | 3 | 0.1 | 0.07 | 0 | 0 |
+| check performance_images | 521 | 51 | 79 | 3.8 | 4 | 11 | 9.47 | 0 | 0 |
+| finish | 606 | 32 | 83 | 6.3 | 10 | 5.3 | 1.68 | 0 | 0 |
+| markdown (copy button) | 413 | 4 | 79 | 2.4 | 1 | 0.1 | 0.1 | 0 | 0 |
+| export JSON | 915 | 3 | 83 | 2.9 | 1 | 0.1 | 0.13 | 0 | 0 |
+| export printable HTML | 653 | 5 | 83 | 2.5 | 1 | 0.1 | 0.09 | 0 | 0 |
 
 Nothing over 5 s, and no step adds more than 64 MB on top of the boot baseline.
 
-Slowest step: check plugins_abandoned, 1.94 s. Highest peak: export JSON, 83 MB. WordPress with WooCommerce and the admin includes alone (boot): 81 MB, 0.46 s. Whole pass: 76 s.
+Slowest step: check security_backups_in_webroot, 1.93 s. Highest peak: finish, 83 MB. WordPress with WooCommerce and the admin includes alone (boot): 81 MB, 0.46 s. Whole pass: 77 s.
 
-Largest tables: wp_postmeta 2,328,574 rows (308 MB), wp_woocommerce_order_itemmeta 1,515,498 rows (164 MB), wp_woocommerce_order_items 172,437 rows (17 MB), wp_posts 112,705 rows (76 MB), wp_options 54,216 rows (17 MB), wp_term_relationships 19,973 rows (3 MB), wp_wc_product_meta_lookup 13,166 rows (5 MB), wp_usermeta 8,795 rows (2 MB).
-
-### Slow network (site address and wordpress.org unreachable)
-
-Every request that leaves the server is dropped, so it runs into its own timeout (5 s per request at most in the plugin). HPOS on data set. Only steps over 5 s or with a violation are listed.
-
-| Step | Time s | Peak MB | Result |
-|---|---:|---:|---|
-| check plugins_abandoned | 6.6 | 81 | ok |
-| check plugins_theme_child | 5.7 | 79 | ok |
-| check security_xmlrpc | 5.4 | 79 | ok |
-| check security_rest_users | 5.6 | 79 | ok |
-| check security_generator | 5.8 | 79 | ok |
-| check security_uploads_listing | 5.8 | 79 | ok |
-| check security_wp_config_http | 5.6 | 79 | ok |
-
-Slowest step with the network down: 6.6 s (limit 30 s). Whole pass: 76 s.
+Largest tables: wp_postmeta 2,330,738 rows (308 MB), wp_woocommerce_order_itemmeta 1,516,881 rows (164 MB), wp_woocommerce_order_items 172,437 rows (17 MB), wp_posts 113,192 rows (76 MB), wp_options 54,216 rows (17 MB), wp_term_relationships 19,973 rows (3 MB), wp_wc_product_meta_lookup 13,090 rows (5 MB), wp_usermeta 8,795 rows (2 MB).
 
 ### Query findings (SAVEQUERIES, EXPLAIN)
 
@@ -215,69 +198,37 @@ Full table scans (`type=ALL` on a table with more than 10,000 rows):
 
 | HPOS | Step | Table | Type | Table rows | Query ms | Query |
 |---|---|---|---|---:|---:|---|
-| on | check performance_expired_transients | `wp_options` | ALL | 54,216 | 9.14 | `SELECT COUNT(*) FROM `wp_options` WHERE option_name LIKE '\\_transient\\_timeout\\_%' AND CAST(option_value AS UNSIGNED) < 1791835507` |
-
-Repeated query shapes (more than 10 times in one step):
-
-| HPOS | Step | Times | Total ms | Query |
-|---|---|---:|---:|---|
-| on | start | 49 | 2.9 | `SELECT autoload FROM wp_options WHERE option_name = 'store_audit_run_result_environment_php_version'` |
-| on | check woocommerce_negative_stock | 20 | 1.8 | `SELECT * FROM wp_posts WHERE ID = 1573 LIMIT 1` |
-| on | finish | 51 | 3.5 | `SELECT option_value FROM wp_options WHERE option_name = 'store_audit_run_result_security_generator' LIMIT 1` |
-| on | finish | 50 | 2.3 | `SELECT autoload FROM wp_options WHERE option_name = 'store_audit_run_result_performance_revisions'` |
-| on | finish | 50 | 9.5 | `DELETE FROM `wp_options` WHERE `option_name` = 'store_audit_run_result_environment_php_version'` |
-| off | start | 49 | 4.2 | `SELECT autoload FROM wp_options WHERE option_name = 'store_audit_run_result_environment_wc_version'` |
-| off | check woocommerce_negative_stock | 20 | 1.4 | `SELECT * FROM wp_posts WHERE ID = 1273 LIMIT 1` |
-| off | finish | 51 | 4.1 | `SELECT option_value FROM wp_options WHERE option_name = 'store_audit_last_report' LIMIT 1` |
-| off | finish | 50 | 2.9 | `SELECT autoload FROM wp_options WHERE option_name = 'store_audit_run_result_environment_object_cache'` |
+| on | check performance_expired_transients | `wp_options` | ALL | 48,101 | 8.84 | `SELECT COUNT(*) FROM `wp_options` WHERE option_name LIKE '\\_transient\\_timeout\\_%' AND CAST(option_value AS UNSIGNED) < 1791836085` |
 
 <!-- perf:results:end -->
 
 
 ## Findings
 
-Nothing here breaks a limit. These are the places where the plugin does more work than it needs, ordered by cost.
-"Performance" means a change that gives the same result faster; no behaviour changes in any of them.
+Nothing here breaks a limit. These are the places where the plugin did more work than it needed, ordered by cost.
+"Performance" means a change that gives the same result faster; no behaviour changes in any of them. Findings 1 to 3 are fixed and the results above
+are from the run after the fix; finding 4 is open.
 
-### 1. Shipping zones check: product lookup is a heavy `WP_Query` (performance, the only one that grows with the catalog)
+### 1. Shipping zones check: product lookup was a heavy `WP_Query` (fixed)
 
-`includes/Checks/WooCommerce/ShippingZones.php`, `read_zones()`, the `wc_get_products()` call that asks "is there at least one published product that
-is not virtual and not downloadable".
+`ShippingZones::has_shippable_product()` replaces the `wc_get_products()` call that asked "is there at least one published product that is not virtual and not downloadable".
+WooCommerce turned it into a `WP_Query` with joins, `GROUP BY` and `ORDER BY` (`Using temporary; Using filesort`, about 23,000 candidate rows), so the cost grew with the catalogue.
+Now it is one `LIMIT 1` query on `wc_product_meta_lookup` (`virtual = 0 AND downloadable = 0`, published `product` posts), with a postmeta fallback (`_virtual` and `_downloadable` equal to `no`) when the lookup table is missing.
 
-- Measured: 113 to 121 ms in the runs (HPOS on and off) at 10,000 products; 174 ms when run again by hand. Every other query in the audit is under 11 ms.
-- Why: WooCommerce turns the call into a `WP_Query` with a left join on `term_relationships`, two joins on `postmeta` (`_virtual`, `_downloadable`),
-  `GROUP BY ID` and `ORDER BY post_date DESC`. `EXPLAIN` shows `Using temporary; Using filesort` with about 23,000 candidate rows. `LIMIT 1` cannot stop
-  early because of the grouping and sorting, so the cost grows with the number of products.
-- Dropping only the `ORDER BY` did not help (116 ms); the grouping and the joins are the cost.
-- Suggested fix, tried on the same data:
+- Before: handler 207 ms, 11 queries, slowest query 116 ms (HPOS on). After: handler 18 ms, 10 queries, slowest query 2.1 ms.
 
-  ```sql
-  SELECT l.product_id
-  FROM wp_wc_product_meta_lookup l
-  JOIN wp_posts p ON p.ID = l.product_id
-  WHERE p.post_type = 'product' AND p.post_status = 'publish'
-    AND l.virtual = 0 AND l.downloadable = 0
-  LIMIT 1;
-  ```
+### 2. Run state: one option per check read and deleted one by one (fixed)
 
-  2.6 ms, `index_merge` on the `virtual` and `downloadable` indexes. A plain two-join `postmeta` query with `LIMIT 1` (no term join, no grouping, no sort)
-  took 0.2 ms. Either returns the same yes or no. The lookup table exists on every supported WooCommerce version; keep a fallback to the current call when it is missing.
+`Ajax::start()` and `Ajax::finish()` now read every stored result with one query over the common prefix and delete them with one `DELETE`, then drop the names from the object cache.
+Each check still has its own option, so parallel `run_check` requests cannot overwrite each other.
 
-### 2. Run state: one option per check read and deleted one by one (performance, small)
+- `start`: 51 queries before, 3 after. `finish`: 153 before, 10 after (HPOS on).
 
-`includes/Ajax.php`: `clear_results()` (line 84, called from `start()` and `finish()`) deletes 50 options one at a time; `finish()` reads them one at a time.
+### 3. Negative stock check: one `SELECT *` per product name (fixed)
 
-- `start`: 51 queries (49 are the same `SELECT autoload ...` shape). `finish`: 153 queries (51 `SELECT option_value`, 50 `SELECT autoload`, 50 `DELETE`).
-- Cost today: 3 to 20 ms per step, so it is the N+1 rule that flags it, not a user-visible delay. It grows with the number of checks, and with a persistent object cache
-  each `delete_option` also touches the cache.
-- Suggested fix: keep one option per check (that is what makes parallel requests safe) but read and delete them with one query each over the common prefix:
-  `SELECT option_name, option_value FROM wp_options WHERE option_name LIKE 'store\_audit\_run\_result\_%'` and one matching `DELETE`, then clear the option cache for those names.
-  `option_name` has a unique index, so the prefix match is a range read of about 50 rows.
+`NegativeStock` primes the post cache for the sampled ids with one `_prime_post_caches()` call before reading the titles.
 
-### 3. Negative stock check: one `SELECT *` per product name (performance, small)
-
-`includes/Checks/WooCommerce/NegativeStock.php` line 165: `get_the_title( $post_id )` in a loop over up to 20 ids runs `SELECT * FROM wp_posts WHERE ID = N LIMIT 1` 20 times (about 2 ms).
-Fix: call `_prime_post_caches( $ids, false, false )` once before the loop, or fetch `ID, post_title` for all ids in one query.
+- 26 queries before, 7 after.
 
 ### 4. Order count runs in two checks (performance, grows with orders)
 

@@ -24,11 +24,76 @@ final class RunStorageTest extends TestCase {
 	use OptionStoreTrait;
 
 	/**
+	 * Queries the fake database received, in order.
+	 *
+	 * @var list<string>
+	 */
+	private array $queries = array();
+
+	/**
+	 * Cache keys dropped through wp_cache_delete.
+	 *
+	 * @var list<string>
+	 */
+	private array $dropped = array();
+
+	/**
+	 * A wpdb double that serves the result rows from the in-memory option store.
+	 */
+	private function fake_db(): void {
+		$db          = \Mockery::mock( 'wpdb' );
+		$db->options = 'wp_options'; // phpcs:ignore WordPress.DB.RestrictedClasses -- Test double.
+		$db->shouldReceive( 'esc_like' )->andReturnUsing( static fn( string $text ): string => $text );
+		$db->shouldReceive( 'prepare' )->andReturnUsing( static fn( string $query, ...$args ): string => $query . ' /* ' . implode( ',', array_map( 'strval', $args ) ) . ' */' );
+		$matching = function (): array {
+			return array_values( array_filter( array_keys( $this->options ), static fn( $name ): bool => 0 === strpos( (string) $name, Ajax::RESULT_PREFIX ) ) );
+		};
+		$db->shouldReceive( 'get_results' )->andReturnUsing(
+			function ( string $query ) use ( $matching ): array {
+				$this->queries[] = $query;
+				return array_map(
+					fn( $name ): array => array(
+						'option_name'  => $name,
+						'option_value' => wp_json_encode( $this->options[ $name ] ),
+					),
+					$matching()
+				);
+			}
+		);
+		$db->shouldReceive( 'get_col' )->andReturnUsing(
+			function ( string $query ) use ( $matching ): array {
+				$this->queries[] = $query;
+				return $matching();
+			}
+		);
+		$db->shouldReceive( 'query' )->andReturnUsing(
+			function ( string $query ) use ( $matching ): int {
+				$this->queries[] = $query;
+				$names           = $matching();
+				foreach ( $names as $name ) {
+					unset( $this->options[ $name ] );
+				}
+				return count( $names );
+			}
+		);
+		$GLOBALS['wpdb'] = $db; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test double.
+		Functions\when( 'maybe_unserialize' )->alias( static fn( string $data ) => json_decode( $data, true ) );
+		Functions\when( 'wp_json_encode' )->alias( static fn( $data ) => json_encode( $data ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test double for wp_json_encode.
+		Functions\when( 'wp_cache_delete' )->alias(
+			function ( string $key ): bool {
+				$this->dropped[] = $key;
+				return true;
+			}
+		);
+	}
+
+	/**
 	 * Stub WordPress and register three fake checks.
 	 */
 	protected function set_up(): void {
 		parent::set_up();
 		$this->stub_option_store();
+		$this->fake_db();
 		Functions\when( 'wp_unslash' )->returnArg();
 		Functions\when( 'sanitize_key' )->returnArg();
 		Functions\when( 'check_ajax_referer' )->justReturn( 1 );
@@ -51,6 +116,7 @@ final class RunStorageTest extends TestCase {
 	 */
 	protected function tear_down(): void {
 		$_POST = array();
+		unset( $GLOBALS['wpdb'] );
 		parent::tear_down();
 	}
 
@@ -272,5 +338,34 @@ final class RunStorageTest extends TestCase {
 			);
 			$this->assertSame( 409, $this->call( 'finish', array( 'run_id' => 'r1' ) )->status );
 		}
+	}
+
+	/**
+	 * Finishing reads every result with one query and drops them with one DELETE, however many checks
+	 * there are, and clears the object cache so a stale copy is never served.
+	 */
+	public function test_finish_uses_one_read_and_one_delete(): void {
+		$run_id = $this->start_run();
+		foreach ( array( 'environment_a', 'security_b', 'plugins_c' ) as $check_id ) {
+			$this->call(
+				'run_check',
+				array(
+					'run_id'   => $run_id,
+					'check_id' => $check_id,
+				)
+			);
+		}
+		$this->queries = array();
+		$this->dropped = array();
+
+		$this->assertTrue( $this->call( 'finish', array( 'run_id' => $run_id ) )->success );
+
+		$reads   = array_filter( $this->queries, static fn( string $q ): bool => str_starts_with( $q, 'SELECT option_name, option_value' ) );
+		$deletes = array_filter( $this->queries, static fn( string $q ): bool => str_starts_with( $q, 'DELETE' ) );
+		$this->assertCount( 1, $reads );
+		$this->assertCount( 1, $deletes );
+		$this->assertContains( Ajax::RESULT_PREFIX . 'security_b', $this->dropped );
+		$this->assertContains( 'alloptions', $this->dropped );
+		$this->assertContains( 'notoptions', $this->dropped );
 	}
 }

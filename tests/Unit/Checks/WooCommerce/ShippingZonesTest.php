@@ -125,4 +125,56 @@ final class ShippingZonesTest extends TestCase {
 	public function test_shipping_off_is_info(): void {
 		$this->assertSame( 'info', ( new ShippingZones( $this->data( array(), false, true, false ) ) )->run()->severity() );
 	}
+
+	/**
+	 * The "sells something shippable" probe is one LIMIT 1 query, on the lookup table when it exists and on
+	 * the postmeta flags otherwise.
+	 *
+	 * @dataProvider lookup_tables
+	 *
+	 * @param bool $has_lookup Whether the product lookup table exists.
+	 * @param bool $found      Whether the probe finds a product.
+	 */
+	public function test_shippable_probe_is_one_limited_query( bool $has_lookup, bool $found ): void {
+		$queries      = array();
+		$db           = \Mockery::mock( 'wpdb' );
+		$db->prefix   = 'wp_';
+		$db->posts    = 'wp_posts';
+		$db->postmeta = 'wp_postmeta';
+		$db->shouldReceive( 'esc_like' )->andReturnUsing( static fn( string $text ): string => $text );
+		$db->shouldReceive( 'prepare' )->andReturnUsing( static fn( string $query, ...$args ): string => $query . ' /* ' . implode( ',', $args ) . ' */' );
+		$db->shouldReceive( 'get_var' )->andReturnUsing(
+			static function ( string $query ) use ( &$queries, $has_lookup, $found ) {
+				if ( str_contains( $query, 'SHOW TABLES' ) ) {
+					return $has_lookup ? 'wp_wc_product_meta_lookup' : null;
+				}
+				$queries[] = $query;
+				return $found ? '42' : null;
+			}
+		);
+		$GLOBALS['wpdb'] = $db; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test double.
+
+		$result = ShippingZones::has_shippable_product();
+		unset( $GLOBALS['wpdb'] );
+
+		$this->assertSame( $found, $result );
+		$this->assertCount( 1, $queries );
+		$this->assertStringContainsString( 'LIMIT 1', $queries[0] );
+		$this->assertStringContainsString( "'publish'", $queries[0] );
+		$this->assertStringContainsString( $has_lookup ? 'l.virtual = 0 AND l.downloadable = 0' : "'_virtual'", $queries[0] );
+	}
+
+	/**
+	 * Both storage layouts, with and without a hit.
+	 *
+	 * @return array<string,array{0:bool,1:bool}>
+	 */
+	public static function lookup_tables(): array {
+		return array(
+			'lookup, found'   => array( true, true ),
+			'lookup, none'    => array( true, false ),
+			'postmeta, found' => array( false, true ),
+			'postmeta, none'  => array( false, false ),
+		);
+	}
 }

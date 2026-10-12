@@ -11,6 +11,7 @@ namespace StoreAudit;
 
 use StoreAudit\Checks\Section;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\Db;
 use StoreAudit\Support\Nonce;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -79,12 +80,43 @@ final class Ajax {
 	}
 
 	/**
-	 * Drop the stored results of any run.
+	 * Stored results of any run, keyed by check id, in one query instead of one option read per check.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function read_results(): array {
+		$db = Db::wpdb();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One read of our own temporary rows; per-option reads cost one query each.
+		$rows    = $db->get_results( $db->prepare( 'SELECT option_name, option_value FROM %i WHERE option_name LIKE %s', $db->options, $db->esc_like( self::RESULT_PREFIX ) . '%' ), ARRAY_A );
+		$results = array();
+		foreach ( $rows ?? array() as $row ) {
+			$name = Arr::get_string( $row, 'option_name' );
+			if ( 0 !== strpos( $name, self::RESULT_PREFIX ) ) {
+				continue;
+			}
+			$results[ substr( $name, strlen( self::RESULT_PREFIX ) ) ] = maybe_unserialize( Arr::get_string( $row, 'option_value' ) );
+		}
+		return $results;
+	}
+
+	/**
+	 * Drop the stored results of any run with one DELETE, then forget them in the object cache so a stale
+	 * copy is never served.
 	 */
 	private function clear_results(): void {
-		foreach ( array_keys( Registry::all() ) as $check_id ) {
-			delete_option( $this->result_option( $check_id ) );
+		$db = Db::wpdb();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Removing our own temporary rows by prefix; one query instead of one per check.
+		$names = $db->get_col( $db->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s', $db->options, $db->esc_like( self::RESULT_PREFIX ) . '%' ) );
+		if ( array() === $names ) {
+			return;
 		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- See above.
+		$db->query( Arr::to_string( $db->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $db->options, $db->esc_like( self::RESULT_PREFIX ) . '%' ) ) );
+		foreach ( $names as $name ) {
+			wp_cache_delete( Arr::to_string( $name ), 'options' );
+		}
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
 	}
 
 	/**
@@ -169,8 +201,9 @@ final class Ajax {
 		$runner  = new Runner();
 		$results = array();
 		$ran     = 0;
+		$all     = $this->read_results();
 		foreach ( Registry::all() as $check_id => $check ) {
-			$stored = get_option( $this->result_option( $check_id ), null );
+			$stored = $all[ $check_id ] ?? null;
 			$row    = is_array( $stored ) && Arr::get_string( $stored, 'run_id' ) === $request['run_id'] ? ReportStore::normalize_row( $stored['result'] ?? null ) : null;
 			if ( null === $row ) {
 				$results[] = $runner->not_run( $check );

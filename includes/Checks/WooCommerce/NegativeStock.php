@@ -159,6 +159,10 @@ final class NegativeStock extends AbstractCheck {
 		}
 		// phpcs:enable
 
+		$post_ids = array_map( array( Arr::class, 'to_int' ), $ids );
+		if ( array() !== $post_ids ) {
+			_prime_post_caches( $post_ids, false, false );
+		}
 		$names = array();
 		foreach ( $ids as $id ) {
 			$post_id = Arr::to_int( $id );

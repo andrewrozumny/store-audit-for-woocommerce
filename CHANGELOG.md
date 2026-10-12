@@ -22,6 +22,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - The plugin starts on `plugins_loaded`, so WooCommerce is detected on single sites and on networks; it declares compatibility with the Cart and Checkout blocks.
 - Attribution and the remaining report texts are translatable. The filter `store_audit_show_attribution` (default true) turns the attribution off in exports; the audit screen always shows it.
 
+### Performance
+- Shipping zones: the "sells a shippable product" probe is one indexed LIMIT 1 query instead of a catalogue-wide product query. Starting and finishing a run read and clear the stored results with a few queries instead of one per check. The negative stock check loads the product titles with one cache priming call.
+
 ### Fixed
 - Uninstall removes only the rows the plugin created, by exact name (the two options, the run rows and the cached wordpress.org answers with their timeout rows), and walks a network in batches of 100 sites.
 - The theme check skips a folder it cannot read instead of failing.

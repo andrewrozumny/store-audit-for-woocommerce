@@ -33,6 +33,11 @@ final class PluginsAbandoned extends AbstractCheck {
 	public const BUDGET_SECONDS = 15.0;
 
 	/**
+	 * Slug of this plugin, never reported as "not hosted on wordpress.org".
+	 */
+	public const SELF_SLUG = 'store-audit-for-woocommerce';
+
+	/**
 	 * Plugin inventory.
 	 *
 	 * @var PluginInventory
@@ -126,6 +131,9 @@ final class PluginsAbandoned extends AbstractCheck {
 		$looked_up   = 0;
 
 		foreach ( array_keys( $installed ) as $file ) {
+			if ( self::SELF_SLUG === WporgApi::slug_from_file( $file ) ) {
+				continue;
+			}
 			$name = PluginInventory::name_of( $installed, $file );
 			if ( $looked_up >= self::MAX_PLUGINS || ( ( $this->clock )() - $start ) > self::BUDGET_SECONDS ) {
 				++$skipped;
@@ -162,7 +170,7 @@ final class PluginsAbandoned extends AbstractCheck {
 				case WporgApi::NOT_FOUND:
 					$unchecked[] = sprintf(
 						/* translators: %s: plugin name. */
-						__( '%s: not checked: not hosted on wordpress.org', 'store-audit-for-woocommerce' ),
+						__( '%s: not checked, it is not hosted on wordpress.org', 'store-audit-for-woocommerce' ),
 						$name
 					);
 					break;

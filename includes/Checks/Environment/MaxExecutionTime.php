@@ -111,13 +111,13 @@ final class MaxExecutionTime extends AbstractCheck {
 		if ( $seconds < 30 ) {
 			return Result::warning(
 				/* translators: %d: seconds. */
-				sprintf( __( 'PHP stops requests after %d seconds, which is short for a store.', 'store-audit-for-woocommerce' ), $seconds )
+				sprintf( _n( 'PHP stops requests after %d second, which is short for a store.', 'PHP stops requests after %d seconds, which is short for a store.', $seconds, 'store-audit-for-woocommerce' ), $seconds )
 			);
 		}
 
 		return Result::ok(
 			/* translators: %d: seconds. */
-			sprintf( __( 'PHP allows requests to run for %d seconds.', 'store-audit-for-woocommerce' ), $seconds )
+			sprintf( _n( 'PHP allows requests to run for %d second.', 'PHP allows requests to run for %d seconds.', $seconds, 'store-audit-for-woocommerce' ), $seconds )
 		);
 	}
 }

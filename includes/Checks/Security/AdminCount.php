@@ -87,7 +87,7 @@ final class AdminCount extends AbstractSecurityCheck {
 		}
 		return Result::warning(
 			/* translators: %d: number of administrators. */
-			sprintf( __( '%d administrator accounts, more than the 3 a typical store needs.', 'store-audit-for-woocommerce' ), $count ),
+			sprintf( _n( '%d administrator account, more than the 3 a typical store needs.', '%d administrator accounts, more than the 3 a typical store needs.', $count, 'store-audit-for-woocommerce' ), $count ),
 			$this->cap_list( $lines )
 		);
 	}

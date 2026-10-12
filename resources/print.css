@@ -1,0 +1,49 @@
+/* Store Audit for WooCommerce - standalone printable report. */
+* { box-sizing: border-box; }
+body.store-audit-print { margin: 0; background: #f0f0f1; color: #1d2327; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+.sap-page { max-width: 860px; margin: 24px auto; padding: 32px; background: #fff; border: 1px solid #c3c4c7; }
+.sap-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 2px solid #1d2327; padding-bottom: 16px; margin-bottom: 20px; }
+.sap-header h1 { margin: 0 0 4px; font-size: 26px; }
+.sap-meta { margin: 0; color: #50575e; }
+.sap-score { text-align: center; }
+.sap-score-number { display: block; font-size: 56px; font-weight: 700; line-height: 1; }
+.sap-score-label { color: #50575e; }
+.sap-score.is-good .sap-score-number { color: #1e7e34; }
+.sap-score.is-fair .sap-score-number { color: #b26200; }
+.sap-score.is-poor .sap-score-number { color: #b32d2e; }
+.sap-button { padding: 8px 16px; font-size: 14px; border: 1px solid #2271b1; border-radius: 3px; background: #2271b1; color: #fff; cursor: pointer; }
+.sap-button:hover { background: #135e96; }
+.sap-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+.sap-table th, .sap-table td { border: 1px solid #c3c4c7; padding: 6px 10px; text-align: left; }
+.sap-table th { background: #f6f7f7; }
+.sap-section h2 { margin: 28px 0 10px; font-size: 20px; border-bottom: 1px solid #c3c4c7; padding-bottom: 4px; }
+.sap-issue { border: 1px solid #c3c4c7; border-left-width: 5px; border-radius: 3px; padding: 8px 14px; margin-bottom: 10px; break-inside: avoid; }
+.sap-issue h3 { margin: 4px 0; font-size: 15px; }
+.sap-issue p { margin: 4px 0; }
+.sap-issue ul { margin: 4px 0 4px 20px; padding: 0; }
+.sap-critical { border-left-color: #b32d2e; }
+.sap-warning { border-left-color: #dba617; }
+.sap-error { border-left-color: #8c8f94; }
+.sap-info { border-left-color: #2271b1; }
+.sap-badge { display: inline-block; font-size: 11px; text-transform: uppercase; font-weight: 600; padding: 1px 7px; border-radius: 3px; background: #50575e; color: #fff; margin-right: 6px; }
+.sap-critical .sap-badge { background: #b32d2e; }
+.sap-warning .sap-badge { background: #996800; }
+.sap-info .sap-badge { background: #2271b1; }
+.sap-passed { margin-top: 10px; break-inside: avoid; }
+.sap-passed h3 { font-size: 14px; margin: 0 0 4px; }
+.sap-passed ul { margin: 0 0 0 20px; padding: 0; columns: 2; }
+.sap-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #c3c4c7; color: #50575e; }
+.sap-footer a { color: #2271b1; }
+@media (max-width: 640px) {
+	.sap-page { margin: 0; padding: 16px; border: 0; }
+	.sap-header { flex-wrap: wrap; }
+	.sap-passed ul { columns: 1; }
+}
+@media print {
+	body.store-audit-print { background: #fff; font-size: 12px; }
+	.sap-page { margin: 0; padding: 0; border: 0; max-width: none; }
+	.sap-button { display: none; }
+	.sap-footer a { color: inherit; }
+	.sap-footer a::after { content: " (" attr(href) ")"; }
+	* { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

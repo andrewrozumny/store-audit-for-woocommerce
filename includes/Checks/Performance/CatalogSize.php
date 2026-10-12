@@ -109,10 +109,18 @@ final class CatalogSize extends AbstractCheck {
 		$products   = (int) ( $d['products'] ?? 0 );
 		$variations = (int) ( $d['variations'] ?? 0 );
 		$summary    = sprintf(
-			/* translators: 1: number of products, 2: number of variations. */
-			__( '%1$d published products and %2$d published variations.', 'store-audit-for-woocommerce' ),
-			$products,
-			$variations
+			/* translators: 1: products, for example "18 published products", 2: variations, for example "1 published variation". */
+			__( '%1$s and %2$s.', 'store-audit-for-woocommerce' ),
+			sprintf(
+				/* translators: %d: number of products. */
+				_n( '%d published product', '%d published products', $products, 'store-audit-for-woocommerce' ),
+				$products
+			),
+			sprintf(
+				/* translators: %d: number of variations. */
+				_n( '%d published variation', '%d published variations', $variations, 'store-audit-for-woocommerce' ),
+				$variations
+			)
 		);
 
 		if ( $variations > 10000 && empty( $d['ext'] ) ) {

@@ -46,7 +46,7 @@ final class StaleOrdersTest extends TestCase {
 		) )->run();
 
 		$this->assertSame( 'info', $result->severity() );
-		$this->assertStringContainsString( '4 pending and 2 failed', $result->summary() );
+		$this->assertStringContainsString( '4 pending, 2 failed', $result->summary() );
 	}
 
 	/**

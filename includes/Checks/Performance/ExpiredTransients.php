@@ -113,7 +113,7 @@ final class ExpiredTransients extends AbstractCheck {
 		}
 		$summary = sprintf(
 			/* translators: %d: number of transients. */
-			__( '%d expired transients are still in the database.', 'store-audit-for-woocommerce' ),
+			_n( '%d expired transient is still in the database.', '%d expired transients are still in the database.', $count, 'store-audit-for-woocommerce' ),
 			$count
 		);
 		return $count > 500 ? Result::warning( $summary ) : Result::info( $summary );

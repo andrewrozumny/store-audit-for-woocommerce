@@ -8,7 +8,8 @@
 /.distignore export-ignore
 /.phpunit.result.cache export-ignore
 /.DS_Store export-ignore
-/assets export-ignore
+/assets-src export-ignore
+/.wordpress-org export-ignore
 /bin export-ignore
 /docs export-ignore
 /node_modules export-ignore

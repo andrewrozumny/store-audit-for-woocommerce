@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Three admin-only actions: start, run_check, finish.
+ * Admin-only actions: start, run_check, finish and markdown.
  */
 final class Ajax {
 
@@ -30,6 +30,7 @@ final class Ajax {
 		add_action( 'wp_ajax_store_audit_start', array( $this, 'start' ) );
 		add_action( 'wp_ajax_store_audit_run_check', array( $this, 'run_check' ) );
 		add_action( 'wp_ajax_store_audit_finish', array( $this, 'finish' ) );
+		add_action( 'wp_ajax_store_audit_markdown', array( $this, 'markdown' ) );
 	}
 
 	/**
@@ -149,6 +150,20 @@ final class Ajax {
 		Report::store_last( $report );
 		delete_option( self::RUN_OPTION );
 
+		$report['generated_at_local'] = Report::local_date( (string) $report['generated_at'] );
 		wp_send_json_success( $report );
+	}
+
+	/**
+	 * The last stored report as Markdown, for the copy button.
+	 */
+	public function markdown(): void {
+		$this->authorize();
+
+		$report = Report::get_last();
+		if ( null === $report ) {
+			wp_send_json_error( array( 'message' => __( 'There is no audit report yet. Run the audit first.', 'store-audit-for-woocommerce' ) ), 404 );
+		}
+		wp_send_json_success( array( 'markdown' => Report::to_markdown( $report ) ) );
 	}
 }

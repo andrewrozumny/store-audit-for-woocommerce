@@ -37,6 +37,7 @@ final class Cli {
 	 * options:
 	 *   - table
 	 *   - json
+	 *   - markdown
 	 * ---
 	 *
 	 * [--save]
@@ -45,6 +46,7 @@ final class Cli {
 	 * ## EXAMPLES
 	 *
 	 *     wp store-audit run --format=json
+	 *     wp store-audit run --format=markdown > store-audit.md
 	 *
 	 * @param string[]             $args       Positional args.
 	 * @param array<string,string> $assoc_args Flags.
@@ -60,7 +62,12 @@ final class Cli {
 		}
 
 		if ( 'json' === $format ) {
-			\WP_CLI::print_value( $report, array( 'format' => 'json' ) );
+			\WP_CLI::line( Report::to_json( $report ) );
+			return;
+		}
+
+		if ( 'markdown' === $format ) {
+			\WP_CLI::line( rtrim( Report::to_markdown( $report ) ) );
 			return;
 		}
 
@@ -76,5 +83,6 @@ final class Cli {
 		}
 		\WP_CLI\Utils\format_items( 'table', $rows, array( 'section', 'severity', 'title', 'summary' ) );
 		\WP_CLI::log( sprintf( 'Overall score: %d / 100', $report['score']['overall'] ) );
+		\WP_CLI::log( Report::attribution() );
 	}
 }

@@ -154,11 +154,23 @@ final class Images extends AbstractCheck {
 		}
 
 		$summary = sprintf(
-			/* translators: 1: number of images sampled, 2: images without size information, 3: images without WebP or AVIF. */
-			__( 'Of the latest %1$d images, %2$d have no saved dimensions and %3$d have no WebP or AVIF version.', 'store-audit-for-woocommerce' ),
-			$total,
-			$no_dims,
-			$old
+			/* translators: 1: sample size, for example "Of the latest 23 images", 2: images without size information, 3: images without WebP or AVIF. */
+			__( '%1$s, %2$s and %3$s.', 'store-audit-for-woocommerce' ),
+			sprintf(
+				/* translators: %d: number of images sampled. */
+				_n( 'Of the latest %d image', 'Of the latest %d images', $total, 'store-audit-for-woocommerce' ),
+				$total
+			),
+			sprintf(
+				/* translators: %d: number of images without saved dimensions. */
+				_n( '%d has no saved dimensions', '%d have no saved dimensions', $no_dims, 'store-audit-for-woocommerce' ),
+				$no_dims
+			),
+			sprintf(
+				/* translators: %d: number of images without a WebP or AVIF version. */
+				_n( '%d has no WebP or AVIF version', '%d have no WebP or AVIF version', $old, 'store-audit-for-woocommerce' ),
+				$old
+			)
 		);
 		$details = array();
 		if ( $no_dims > 0 ) {

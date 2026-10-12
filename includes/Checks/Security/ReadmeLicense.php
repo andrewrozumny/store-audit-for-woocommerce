@@ -98,7 +98,7 @@ final class ReadmeLicense extends AbstractProbeCheck {
 		}
 		return Result::info(
 			/* translators: %s: file names. */
-			sprintf( __( 'These files reveal the WordPress version and can be removed: %s', 'store-audit-for-woocommerce' ), implode( ', ', $served ) ),
+			sprintf( _n( 'This file reveals the WordPress version and can be removed: %s', 'These files reveal the WordPress version and can be removed: %s', count( $served ), 'store-audit-for-woocommerce' ), implode( ', ', $served ) ),
 			$served
 		);
 	}

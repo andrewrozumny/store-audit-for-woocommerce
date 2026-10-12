@@ -120,7 +120,7 @@ final class Revisions extends AbstractCheck {
 		);
 		$summary = sprintf(
 			/* translators: %d: number of revisions. */
-			__( '%d saved revisions.', 'store-audit-for-woocommerce' ),
+			_n( '%d saved revision.', '%d saved revisions.', $count, 'store-audit-for-woocommerce' ),
 			$count
 		);
 

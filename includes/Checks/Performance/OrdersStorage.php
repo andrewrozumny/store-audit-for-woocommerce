@@ -121,7 +121,7 @@ final class OrdersStorage extends AbstractCheck {
 		$storage = $hpos ? __( 'dedicated orders tables (HPOS)', 'store-audit-for-woocommerce' ) : __( 'the posts tables (legacy)', 'store-audit-for-woocommerce' );
 		$summary = sprintf(
 			/* translators: 1: number of orders, 2: storage type. */
-			__( '%1$d orders, stored in %2$s.', 'store-audit-for-woocommerce' ),
+			_n( '%1$d order, stored in %2$s.', '%1$d orders, stored in %2$s.', $orders, 'store-audit-for-woocommerce' ),
 			$orders,
 			$storage
 		);

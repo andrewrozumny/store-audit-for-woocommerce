@@ -118,7 +118,7 @@ final class Heartbeat extends AbstractCheck {
 			$details[] = __( 'Interval: WordPress default (60 seconds in the dashboard, 15 seconds while editing a post).', 'store-audit-for-woocommerce' );
 		} else {
 			/* translators: %d: seconds. */
-			$details[] = sprintf( __( 'Interval set by a plugin or theme: %d seconds.', 'store-audit-for-woocommerce' ), $interval );
+			$details[] = sprintf( _n( 'Interval set by a plugin or theme: %d second.', 'Interval set by a plugin or theme: %d seconds.', $interval, 'store-audit-for-woocommerce' ), $interval );
 		}
 		/* translators: %d: number of callbacks. */
 		$details[] = sprintf( __( 'Functions listening to the Heartbeat: %d', 'store-audit-for-woocommerce' ), $callbacks );
@@ -126,14 +126,14 @@ final class Heartbeat extends AbstractCheck {
 		if ( null !== $interval && $interval < 30 ) {
 			return Result::warning(
 				/* translators: %d: seconds. */
-				sprintf( __( 'The Heartbeat is set to every %d seconds, which loads the server heavily.', 'store-audit-for-woocommerce' ), $interval ),
+				sprintf( _n( 'The Heartbeat is set to every %d second, which loads the server heavily.', 'The Heartbeat is set to every %d seconds, which loads the server heavily.', $interval, 'store-audit-for-woocommerce' ), $interval ),
 				$details
 			);
 		}
 		if ( $callbacks > 10 ) {
 			return Result::info(
 				/* translators: %d: number of callbacks. */
-				sprintf( __( '%d functions run on every Heartbeat ping.', 'store-audit-for-woocommerce' ), $callbacks ),
+				sprintf( _n( '%d function runs on every Heartbeat ping.', '%d functions run on every Heartbeat ping.', $callbacks, 'store-audit-for-woocommerce' ), $callbacks ),
 				$details
 			);
 		}

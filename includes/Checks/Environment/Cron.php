@@ -146,7 +146,7 @@ final class Cron extends AbstractCheck {
 			$level   = $oldest > 86400 ? 'critical' : 'warning';
 			$parts[] = sprintf(
 				/* translators: 1: number of tasks, 2: age, e.g. "3 hours". */
-				__( '%1$d scheduled tasks are more than an hour late, the oldest by %2$s.', 'store-audit-for-woocommerce' ),
+				_n( '%1$d scheduled task is more than an hour late, the oldest by %2$s.', '%1$d scheduled tasks are more than an hour late, the oldest by %2$s.', $count, 'store-audit-for-woocommerce' ),
 				$count,
 				human_time_diff( 0, $oldest )
 			);
@@ -162,7 +162,7 @@ final class Cron extends AbstractCheck {
 		if ( null !== $as && $as > 100 ) {
 			$level = 'ok' === $level ? 'warning' : $level;
 			/* translators: %d: number of actions. */
-			$parts[] = sprintf( __( '%d WooCommerce background actions are waiting for more than an hour.', 'store-audit-for-woocommerce' ), $as );
+			$parts[] = sprintf( _n( '%d WooCommerce background action is waiting for more than an hour.', '%d WooCommerce background actions are waiting for more than an hour.', $as, 'store-audit-for-woocommerce' ), $as );
 		}
 
 		if ( ! empty( $d['disabled'] ) ) {

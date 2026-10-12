@@ -87,7 +87,7 @@ final class Webhooks extends AbstractCheck {
 		foreach ( $rows as $row ) {
 			$lines[] = sprintf(
 				/* translators: 1: webhook name, 2: status, 3: failed deliveries. */
-				__( '%1$s: status %2$s, %3$d failed deliveries', 'store-audit-for-woocommerce' ),
+				_n( '%1$s: status %2$s, %3$d failed delivery', '%1$s: status %2$s, %3$d failed deliveries', (int) $row['failures'], 'store-audit-for-woocommerce' ),
 				$row['name'],
 				$row['status'],
 				$row['failures']

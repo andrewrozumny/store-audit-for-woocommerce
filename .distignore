@@ -5,14 +5,16 @@
 .editorconfig
 .distignore
 .phpunit.result.cache
+.wordpress-org
 .DS_Store
 assets
+assets-src
 bin
 docs
+dist
 node_modules
 tests
 vendor
-dist
 incoming
 composer.json
 composer.lock

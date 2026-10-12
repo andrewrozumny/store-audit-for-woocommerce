@@ -127,7 +127,7 @@ final class InactiveAdmins extends AbstractSecurityCheck {
 		if ( array() !== $unknown ) {
 			return Result::info(
 				/* translators: %d: number of accounts. */
-				sprintf( __( 'No recent login record for %d administrator account(s), so inactivity cannot be judged.', 'store-audit-for-woocommerce' ), count( $unknown ) ),
+				sprintf( _n( 'No recent login record for %d administrator account, so inactivity cannot be judged.', 'No recent login record for %d administrator accounts, so inactivity cannot be judged.', count( $unknown ), 'store-audit-for-woocommerce' ), count( $unknown ) ),
 				$details
 			);
 		}

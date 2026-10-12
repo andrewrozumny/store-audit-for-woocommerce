@@ -131,7 +131,7 @@ final class Autoload extends AbstractCheck {
 		}
 		$summary = sprintf(
 			/* translators: 1: number of options, 2: total size. */
-			__( '%1$d options (%2$s) are loaded on every page.', 'store-audit-for-woocommerce' ),
+			_n( '%1$d option (%2$s) is loaded on every page.', '%1$d options (%2$s) are loaded on every page.', $count, 'store-audit-for-woocommerce' ),
 			$count,
 			$this->format_bytes( $bytes )
 		);

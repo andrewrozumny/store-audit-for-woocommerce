@@ -13,6 +13,13 @@
 	var progressFill = document.getElementById( 'store-audit-progress-fill' );
 	var progressText = document.getElementById( 'store-audit-progress-text' );
 	var reportEl = document.getElementById( 'store-audit-report' );
+	var actionsEl = document.getElementById( 'store-audit-actions' );
+	var footerEl = document.getElementById( 'store-audit-footer' );
+	var copyBtn = document.getElementById( 'store-audit-copy' );
+	var noticeEl = document.getElementById( 'store-audit-notice' );
+	var fallbackEl = document.getElementById( 'store-audit-fallback' );
+	var fallbackText = document.getElementById( 'store-audit-fallback-text' );
+	var noticeTimer = null;
 
 	if ( ! runBtn || ! reportEl ) {
 		return;
@@ -35,9 +42,106 @@
 		} );
 	}
 
-	function formatDate( iso ) {
-		var d = new Date( iso );
-		return isNaN( d.getTime() ) ? String( iso ) : d.toLocaleString();
+	// The date is formatted on the server in the site's own format and time zone.
+	function formatDate( report ) {
+		return report.generated_at_local || report.generated_at || '';
+	}
+
+	function showNotice( message, isError ) {
+		if ( ! noticeEl ) {
+			return;
+		}
+		noticeEl.textContent = message;
+		noticeEl.className = 'store-audit-notice' + ( isError ? ' is-error' : '' );
+		if ( noticeTimer ) {
+			clearTimeout( noticeTimer );
+		}
+		noticeTimer = setTimeout( function () {
+			noticeEl.textContent = '';
+		}, 5000 );
+	}
+
+	function setExportsVisible( visible ) {
+		[ actionsEl, footerEl ].forEach( function ( node ) {
+			if ( node ) {
+				node.hidden = ! visible;
+			}
+		} );
+	}
+
+	function showFallback( markdown ) {
+		if ( ! fallbackEl || ! fallbackText ) {
+			return;
+		}
+		fallbackText.value = markdown;
+		fallbackEl.hidden = false;
+		fallbackText.focus();
+		fallbackText.select();
+	}
+
+	function copyMarkdown() {
+		copyBtn.disabled = true;
+		fallbackEl.hidden = true;
+		post( 'store_audit_markdown', {}, CHECK_TIMEOUT_MS ).then( function ( data ) {
+			var markdown = data.markdown || '';
+			if ( navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext ) {
+				return navigator.clipboard.writeText( markdown ).then( function () {
+					showNotice( S.copied, false );
+				}, function () {
+					showFallback( markdown );
+					showNotice( S.copyFailed, true );
+				} );
+			}
+			showFallback( markdown );
+			showNotice( S.copyFailed, true );
+			return null;
+		} ).catch( function () {
+			showNotice( S.copyError, true );
+		} ).finally( function () {
+			copyBtn.disabled = false;
+		} );
+	}
+
+	function countBy( results ) {
+		var counts = { critical: 0, warning: 0, info: 0, ok: 0, error: 0 };
+		results.forEach( function ( row ) {
+			if ( undefined !== counts[ row.severity ] ) {
+				counts[ row.severity ]++;
+			}
+		} );
+		return counts;
+	}
+
+	function renderCounts( results ) {
+		var counts = countBy( results );
+		var wrap = el( 'ul', 'store-audit-counts' );
+		var items = [
+			[ 'critical', S.summaryCritical, counts.critical ],
+			[ 'warning', S.summaryWarnings, counts.warning ],
+			[ 'info', S.summaryInfo, counts.info ],
+			[ 'ok', S.summaryPassed, counts.ok ]
+		];
+		if ( counts.error > 0 ) {
+			items.push( [ 'error', S.summaryError, counts.error ] );
+		}
+		items.forEach( function ( item ) {
+			var li = el( 'li', 'store-audit-count severity-' + item[ 0 ] );
+			li.appendChild( el( 'span', 'store-audit-count-number', item[ 2 ] ) );
+			li.appendChild( el( 'span', 'store-audit-count-label', item[ 1 ] ) );
+			wrap.appendChild( li );
+		} );
+		return wrap;
+	}
+
+	function scrollToSection( event ) {
+		var link = event.currentTarget;
+		var target = document.getElementById( link.getAttribute( 'data-target' ) );
+		if ( ! target ) {
+			return;
+		}
+		event.preventDefault();
+		var reduce = window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+		target.scrollIntoView( { behavior: reduce ? 'auto' : 'smooth', block: 'start' } );
 	}
 
 	function post( action, data, timeoutMs ) {
@@ -136,6 +240,7 @@
 		big.appendChild( el( 'span', 'store-audit-score-label', S.outOf ) );
 		summary.appendChild( big );
 		summary.appendChild( el( 'div', 'store-audit-score-title', S.score ) );
+		summary.appendChild( renderCounts( results ) );
 
 		var chips = el( 'div', 'store-audit-chips' );
 		var sectionIds = Object.keys( score.sections || {} );
@@ -143,6 +248,8 @@
 			var s = score.sections[ id ];
 			var chip = el( 'a', 'store-audit-chip ' + scoreClass( s.score ) );
 			chip.href = '#store-audit-section-' + id;
+			chip.setAttribute( 'data-target', 'store-audit-section-' + id );
+			chip.addEventListener( 'click', scrollToSection );
 			chip.appendChild( el( 'span', 'store-audit-chip-label', s.label ) );
 			chip.appendChild( el( 'span', 'store-audit-chip-score', s.score ) );
 			chips.appendChild( chip );
@@ -175,9 +282,22 @@
 			var section = el( 'section', 'store-audit-section' );
 			section.id = 'store-audit-section-' + id;
 			section.appendChild( el( 'h2', '', label ) );
+			var passed = [];
 			rows.forEach( function ( row ) {
+				if ( 'ok' === row.severity ) {
+					passed.push( row );
+					return;
+				}
 				section.appendChild( renderRow( row ) );
 			} );
+			if ( passed.length ) {
+				var box = el( 'details', 'store-audit-passed' );
+				box.appendChild( el( 'summary', '', S.passedChecks.replace( '%d', passed.length ) ) );
+				passed.forEach( function ( row ) {
+					box.appendChild( renderRow( row ) );
+				} );
+				section.appendChild( box );
+			}
 			reportEl.appendChild( section );
 		} );
 	}
@@ -185,10 +305,12 @@
 	function showLast( report ) {
 		lastEl.textContent = '';
 		if ( report && report.generated_at ) {
-			lastEl.textContent = S.lastRun + ' ' + formatDate( report.generated_at );
+			lastEl.textContent = S.lastRun + ' ' + formatDate( report );
 			runBtn.textContent = S.runAgain;
+			setExportsVisible( true );
 		} else {
 			runBtn.textContent = S.run;
+			setExportsVisible( false );
 		}
 	}
 
@@ -215,7 +337,12 @@
 
 	function runAudit() {
 		runBtn.disabled = true;
+		runBtn.textContent = S.running;
 		reportEl.textContent = '';
+		setExportsVisible( false );
+		if ( fallbackEl ) {
+			fallbackEl.hidden = true;
+		}
 		progressEl.hidden = false;
 		setProgress( 0, 1, '' );
 		var failed = [];
@@ -240,14 +367,21 @@
 			render( report );
 			showLast( report );
 		} ).catch( function ( err ) {
+			setExportsVisible( !! cfg.lastReport );
 			reportEl.appendChild( el( 'div', 'notice notice-error inline', ( err && err.message ) ? S.failedStart + ' (' + err.message + ')' : S.failedStart ) );
 		} ).finally( function () {
 			progressEl.hidden = true;
 			runBtn.disabled = false;
+			if ( runBtn.textContent === S.running ) {
+				runBtn.textContent = cfg.lastReport || lastEl.textContent ? S.runAgain : S.run;
+			}
 		} );
 	}
 
 	runBtn.addEventListener( 'click', runAudit );
+	if ( copyBtn ) {
+		copyBtn.addEventListener( 'click', copyMarkdown );
+	}
 	showLast( cfg.lastReport );
 	if ( cfg.lastReport ) {
 		render( cfg.lastReport );

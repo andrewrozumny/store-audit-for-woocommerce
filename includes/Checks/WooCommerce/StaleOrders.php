@@ -86,8 +86,9 @@ final class StaleOrders extends AbstractCheck {
 		}
 
 		$summary = sprintf(
-			/* translators: 1: pending orders, 2: failed orders. */
-			__( '%1$d pending and %2$d failed orders are older than 30 days.', 'store-audit-for-woocommerce' ),
+			/* translators: 1: total orders, 2: pending orders, 3: failed orders. */
+			_n( '%1$d order is older than 30 days (%2$d pending, %3$d failed).', '%1$d orders are older than 30 days (%2$d pending, %3$d failed).', $total, 'store-audit-for-woocommerce' ),
+			$total,
 			$data['pending'],
 			$data['failed']
 		);

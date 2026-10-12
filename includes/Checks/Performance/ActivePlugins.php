@@ -105,7 +105,7 @@ final class ActivePlugins extends AbstractCheck {
 		$total   = $active + $network;
 		$summary = sprintf(
 			/* translators: %d: number of plugins. */
-			__( '%d plugins are active.', 'store-audit-for-woocommerce' ),
+			_n( '%d plugin is active.', '%d plugins are active.', $total, 'store-audit-for-woocommerce' ),
 			$total
 		);
 		$details = array();

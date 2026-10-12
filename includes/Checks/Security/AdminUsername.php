@@ -70,7 +70,7 @@ final class AdminUsername extends AbstractSecurityCheck {
 	 * Fix hint.
 	 */
 	public function fix_hint(): string {
-		return __( 'Create a new administrator with a unique login, move your content to it, and delete the old "admin" user.', 'store-audit-for-woocommerce' );
+		return __( 'Create a new administrator with a unique login, move your content to it, and delete the old "admin" user. Show a nickname publicly instead of the login.', 'store-audit-for-woocommerce' );
 	}
 
 	/**
@@ -126,7 +126,8 @@ final class AdminUsername extends AbstractSecurityCheck {
 			return Result::warning(
 				/* translators: %d: number of administrators. */
 				sprintf( _n( '%d administrator login is shown publicly as the author name.', '%d administrator logins are shown publicly as the author name.', count( $exposed ), 'store-audit-for-woocommerce' ), count( $exposed ) ),
-				$details
+				$details,
+				__( 'In Users > Profile, set a nickname and choose it under "Display name publicly as", so the login stays private.', 'store-audit-for-woocommerce' )
 			);
 		}
 		return Result::ok( __( 'No guessable administrator logins found.', 'store-audit-for-woocommerce' ) );

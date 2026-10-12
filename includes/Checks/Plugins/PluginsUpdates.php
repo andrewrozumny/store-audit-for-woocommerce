@@ -105,15 +105,38 @@ final class PluginsUpdates extends AbstractCheck {
 			return Result::ok( __( 'All plugins and themes are up to date.', 'store-audit-for-woocommerce' ) );
 		}
 
-		return Result::warning(
-			sprintf(
-				/* translators: 1: number of plugin updates, 2: number of theme updates. */
-				__( '%1$d plugin updates and %2$d theme updates are waiting.', 'store-audit-for-woocommerce' ),
-				count( $plugins ),
-				count( $themes )
-			),
-			DetailList::cap( $lines )
-		);
+		$plugin_count = count( $plugins );
+		$theme_count  = count( $themes );
+		if ( 0 === $theme_count ) {
+			$summary = sprintf(
+				/* translators: %d: number of plugin updates. */
+				_n( '%d plugin update is waiting.', '%d plugin updates are waiting.', $plugin_count, 'store-audit-for-woocommerce' ),
+				$plugin_count
+			);
+		} elseif ( 0 === $plugin_count ) {
+			$summary = sprintf(
+				/* translators: %d: number of theme updates. */
+				_n( '%d theme update is waiting.', '%d theme updates are waiting.', $theme_count, 'store-audit-for-woocommerce' ),
+				$theme_count
+			);
+		} else {
+			$summary = sprintf(
+				/* translators: 1: plugin updates, for example "2 plugin updates", 2: theme updates, for example "1 theme update". */
+				__( '%1$s and %2$s are waiting.', 'store-audit-for-woocommerce' ),
+				sprintf(
+					/* translators: %d: number of plugin updates. */
+					_n( '%d plugin update', '%d plugin updates', $plugin_count, 'store-audit-for-woocommerce' ),
+					$plugin_count
+				),
+				sprintf(
+					/* translators: %d: number of theme updates. */
+					_n( '%d theme update', '%d theme updates', $theme_count, 'store-audit-for-woocommerce' ),
+					$theme_count
+				)
+			);
+		}
+
+		return Result::warning( $summary, DetailList::cap( $lines ) );
 	}
 
 	/**

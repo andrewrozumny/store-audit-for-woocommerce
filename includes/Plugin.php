@@ -71,6 +71,8 @@ final class Plugin {
 
 		( new Admin\Page() )->register();
 		( new Ajax() )->register();
+		( new Admin\Exports() )->register();
+		( new Admin\DashboardWidget() )->register();
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			Cli::register();

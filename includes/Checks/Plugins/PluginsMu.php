@@ -118,7 +118,7 @@ final class PluginsMu extends AbstractCheck {
 			return Result::warning(
 				sprintf(
 					/* translators: 1: number of old must-use plugins, 2: total number. */
-					__( '%1$d of %2$d must-use plugins have not been touched for over 2 years.', 'store-audit-for-woocommerce' ),
+					_n( '%1$d of %2$d must-use plugins has not been touched for over 2 years.', '%1$d of %2$d must-use plugins have not been touched for over 2 years.', $old, 'store-audit-for-woocommerce' ),
 					$old,
 					count( $items )
 				),

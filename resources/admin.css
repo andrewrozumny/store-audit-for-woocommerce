@@ -37,3 +37,47 @@
 .store-audit-more summary { cursor: pointer; color: #2271b1; }
 .store-audit-more p { margin: 6px 0 0; }
 .store-audit-actions:empty, .store-audit-footer:empty { display: none; }
+.store-audit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.store-audit-actions[hidden], .store-audit-footer[hidden], .store-audit-fallback[hidden] { display: none; }
+.store-audit-notice { color: #1e7e34; font-weight: 600; }
+.store-audit-notice.is-error { color: #8a2424; font-weight: 400; }
+.store-audit-fallback { margin: 0 0 12px; }
+.store-audit-footer { margin: 28px 0 8px; color: #50575e; }
+.store-audit-counts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 16px 0 0; padding: 0; list-style: none; }
+.store-audit-count { display: flex; align-items: baseline; gap: 6px; }
+.store-audit-count-number { font-size: 20px; font-weight: 700; }
+.store-audit-count-label { color: #50575e; }
+.store-audit-count.severity-critical .store-audit-count-number { color: #b32d2e; }
+.store-audit-count.severity-warning .store-audit-count-number { color: #996800; }
+.store-audit-count.severity-info .store-audit-count-number { color: #2271b1; }
+.store-audit-count.severity-ok .store-audit-count-number { color: #1e7e34; }
+.store-audit-section { scroll-margin-top: 48px; }
+.store-audit-chip:focus-visible, .store-audit-more summary:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.store-audit-row-title { overflow-wrap: anywhere; }
+.store-audit-row-summary, .store-audit-row-details { overflow-wrap: anywhere; }
+@media (max-width: 782px) {
+	.store-audit { max-width: none; }
+	.store-audit-controls { flex-wrap: wrap; gap: 8px; }
+	.store-audit-controls .button-hero { width: 100%; text-align: center; }
+	.store-audit-summary { padding: 14px; }
+	.store-audit-score-number { font-size: 52px; }
+	.store-audit-row { padding: 10px 12px; }
+	.store-audit-row-head { flex-wrap: wrap; gap: 6px; }
+	.store-audit-section { scroll-margin-top: 62px; }
+	.store-audit-actions .button { flex: 1 1 auto; text-align: center; min-height: 40px; line-height: 38px; }
+	.store-audit-chip { padding: 6px 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.store-audit-progress-bar span { transition: none; }
+}
+
+.store-audit-passed {
+	margin: 8px 0 0;
+}
+
+.store-audit-passed > summary {
+	cursor: pointer;
+	padding: 8px 0;
+	color: #1d6b2b;
+	font-weight: 600;
+}

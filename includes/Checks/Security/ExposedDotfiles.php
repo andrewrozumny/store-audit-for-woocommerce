@@ -98,7 +98,7 @@ final class ExposedDotfiles extends AbstractProbeCheck {
 		if ( array() !== $served ) {
 			return Result::critical(
 				/* translators: %s: paths. */
-				sprintf( __( 'These private files can be downloaded by anyone: %s', 'store-audit-for-woocommerce' ), implode( ', ', $served ) ),
+				sprintf( _n( 'This private file can be downloaded by anyone: %s', 'These private files can be downloaded by anyone: %s', count( $served ), 'store-audit-for-woocommerce' ), implode( ', ', $served ) ),
 				$served
 			);
 		}
@@ -112,7 +112,7 @@ final class ExposedDotfiles extends AbstractProbeCheck {
 		if ( array() !== $on_disk ) {
 			return Result::info(
 				/* translators: %s: names. */
-				sprintf( __( 'Present in the site root but not reachable from the web: %s. Keep it that way.', 'store-audit-for-woocommerce' ), implode( ', ', $on_disk ) ),
+				sprintf( _n( 'Present in the site root but not reachable from the web: %s. Keep it that way.', 'Present in the site root but not reachable from the web: %s. Keep it that way.', count( $on_disk ), 'store-audit-for-woocommerce' ), implode( ', ', $on_disk ) ),
 				$on_disk
 			);
 		}

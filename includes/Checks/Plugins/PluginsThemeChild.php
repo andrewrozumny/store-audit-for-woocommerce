@@ -158,7 +158,7 @@ final class PluginsThemeChild extends AbstractCheck {
 			return Result::warning(
 				sprintf(
 					/* translators: 1: theme name, 2: number of files, 3: where the theme comes from. */
-					__( 'The files of the parent theme "%1$s" look edited (%2$d newer than the theme; %3$s).', 'store-audit-for-woocommerce' ),
+					_n( 'The files of the parent theme "%1$s" look edited (%2$d file is newer than the theme; %3$s).', 'The files of the parent theme "%1$s" look edited (%2$d files are newer than the theme; %3$s).', count( $edited ), 'store-audit-for-woocommerce' ),
 					$theme['name'],
 					count( $edited ),
 					$origin

@@ -48,9 +48,9 @@ final class CatalogSizeTest extends TestCase {
 	}
 
 	/**
-	 * Small catalog is info.
+	 * Small catalog is ok.
 	 */
-	public function test_small_catalog_is_info(): void {
+	public function test_small_catalog_is_ok(): void {
 		$result = $this->run_with(
 			array(
 				'products'   => 18,
@@ -59,15 +59,15 @@ final class CatalogSizeTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'info', $result->severity() );
+		$this->assertSame( 'ok', $result->severity() );
 		$this->assertStringContainsString( '18 published products', $result->summary() . implode( ' ', $result->details() ) );
 		$this->assertStringContainsString( '5 published variations', $result->summary() . implode( ' ', $result->details() ) );
 	}
 
 	/**
-	 * Huge without cache is warning.
+	 * Huge without cache is only info: the missing cache is penalised once, in Environment.
 	 */
-	public function test_huge_without_cache_is_warning(): void {
+	public function test_huge_without_cache_is_info_pointing_to_object_cache(): void {
 		$result = $this->run_with(
 			array(
 				'products'   => 900,
@@ -76,13 +76,14 @@ final class CatalogSizeTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'warning', $result->severity() );
+		$this->assertSame( 'info', $result->severity() );
+		$this->assertStringContainsString( 'Persistent object cache in Environment', $result->summary() . implode( ' ', $result->details() ) );
 	}
 
 	/**
-	 * Huge with cache is info.
+	 * Huge with cache is ok.
 	 */
-	public function test_huge_with_cache_is_info(): void {
+	public function test_huge_with_cache_is_ok(): void {
 		$result = $this->run_with(
 			array(
 				'products'   => 900,
@@ -91,7 +92,7 @@ final class CatalogSizeTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'info', $result->severity() );
+		$this->assertSame( 'ok', $result->severity() );
 	}
 
 	/**

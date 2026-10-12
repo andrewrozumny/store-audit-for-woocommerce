@@ -72,4 +72,11 @@ final class RestUsers extends AbstractProbeCheck {
 			array_slice( $slugs, 0, 10 )
 		);
 	}
+
+	/**
+	 * Details name accounts, files or keys, so exports do not carry them.
+	 */
+	public function is_sensitive(): bool {
+		return true;
+	}
 }

@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\NotCheckedException;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -22,6 +23,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Must-use plugins load silently, so forgotten ones are easy to miss.
  */
 final class PluginsMu extends AbstractCheck {
+
+	/**
+	 * File names of must-use plugins that hosts install themselves (WP Engine, Kinsta, GoDaddy, Pantheon,
+	 * WordPress.com). They are not the owner's forgotten code and are not judged by age.
+	 */
+	private const HOST_FILES = '/^(wpengine-common|kinsta-mu-plugins|gd-system-plugin|pantheon(-mu-plugin)?|wpcomsh(-loader)?)(\.php|\/)/i';
 
 	/**
 	 * Entries: array<string,array{name:string,mtime:int}> keyed by file name.
@@ -94,10 +101,21 @@ final class PluginsMu extends AbstractCheck {
 
 		$cutoff = strtotime( '-2 years', $this->now );
 		$lines  = array();
+		$hosted = array();
 		$old    = 0;
 		foreach ( $items as $file => $raw_item ) {
-			$item  = Arr::to_string_keyed( $raw_item );
-			$name  = Arr::get_string( $item, 'name' );
+			$item = Arr::to_string_keyed( $raw_item );
+			$name = Arr::get_string( $item, 'name' );
+			if ( $this->is_host_plugin( (string) $file, $name ) ) {
+				unset( $items[ $file ] );
+				$hosted[] = sprintf(
+					/* translators: 1: plugin name, 2: file name. */
+					__( '%1$s (%2$s): installed by your host', 'store-audit-for-woocommerce' ),
+					$name,
+					$file
+				);
+				continue;
+			}
 			$mtime = Arr::get_int( $item, 'mtime' );
 			if ( $mtime > 0 && $mtime < $cutoff ) {
 				++$old;
@@ -116,6 +134,10 @@ final class PluginsMu extends AbstractCheck {
 					$file
 				);
 			}
+		}
+
+		if ( array() === $lines ) {
+			return Result::ok( __( 'The only must-use plugins are the ones your host installs, which is normal.', 'store-audit-for-woocommerce' ), DetailList::cap( $hosted ) );
 		}
 
 		if ( $old > 0 ) {
@@ -141,14 +163,27 @@ final class PluginsMu extends AbstractCheck {
 	}
 
 	/**
+	 * Whether a must-use plugin is one a hosting provider installs.
+	 *
+	 * @param string $file File name relative to the mu-plugins folder.
+	 * @param string $name Plugin name.
+	 */
+	private function is_host_plugin( string $file, string $name ): bool {
+		if ( 1 === preg_match( self::HOST_FILES, $file ) ) {
+			return true;
+		}
+		return 'mu-plugin.php' === strtolower( $file ) && str_starts_with( strtolower( $name ), 'wp engine' );
+	}
+
+	/**
 	 * Read must-use plugins from WordPress and the mu-plugins directory.
 	 *
 	 * @return array<string,array{name:string,mtime:int}>
-	 * @throws \RuntimeException When the plugin functions are not loaded.
+	 * @throws NotCheckedException When the plugin functions are not loaded.
 	 */
 	private function read_mu_plugins(): array {
 		if ( ! function_exists( 'get_mu_plugins' ) ) {
-			throw new \RuntimeException( 'The WordPress plugin functions are not loaded.' );
+			throw new NotCheckedException( esc_html__( 'the WordPress plugin functions are not loaded.', 'store-audit-for-woocommerce' ) );
 		}
 		$out = array();
 		$dir = defined( 'WPMU_PLUGIN_DIR' ) ? rtrim( WPMU_PLUGIN_DIR, '/\\' ) : '';

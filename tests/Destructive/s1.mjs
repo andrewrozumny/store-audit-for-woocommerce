@@ -62,7 +62,7 @@ export async function s1( S ) {
 	const { admin, sub, shop } = S;
 
 	// ---------------------------------------------------------------- 1.1 roles and nonces
-	await scenario( '1.1', 'AJAX: roles and nonces', '403 for subscriber, 400 for guest, 403 for every bad nonce, 200 for shop manager and administrator, no side effects, no PHP errors', async () => {
+	await scenario( '1.1', 'AJAX: roles and nonces', '403 for subscriber, 400 for guest, 403 for every bad nonce, 403 for shop manager, 200 for administrator, no side effects, no PHP errors', async () => {
 		clearPluginRows();
 		const mark = logMark();
 		const before = pluginRows();
@@ -111,13 +111,12 @@ export async function s1( S ) {
 		}
 		eq( pluginRows(), withRun, 'bad nonces changed plugin rows' );
 
-		// Shop manager (manage_woocommerce) must work end to end.
-		const full = await fullAudit( shop );
-		ok( full.ok && full.finishStatus === 200 && full.finish.success, 'shop manager completes an audit' );
-		ok( full.ok && full.results.length === full.start.checks.length, `shop manager got every check result (${ full.ok ? full.results.length : 0 } of ${ full.ok ? full.start.checks.length : 0 })` );
-		const md = await ajax( shop, 'store_audit_markdown' );
-		eq( md.status, 200, 'shop manager markdown' );
-		ok( ( jsonBody( md )?.data?.markdown || '' ).startsWith( '# Store Audit report' ), 'markdown starts with the title' );
+		// A shop manager (manage_woocommerce, not manage_options) is refused everywhere.
+		for ( const a of AJAX ) {
+			const r = await ajax( shop, a, { run_id: runId, check_id: 'php_version' } );
+			eq( r.status, 403, `shop manager ${ a }` );
+		}
+		eq( ( await ajax( shop, 'store_audit_markdown' ) ).status, 403, 'shop manager markdown' );
 
 		// Administrator, nothing to continue with.
 		for ( const a of [ 'store_audit_run_check', 'store_audit_finish' ] ) {
@@ -266,16 +265,16 @@ export async function s1( S ) {
 		const problems = htmlProblems( pr.text );
 		ok( problems.length === 0, `print page problems: ${ problems.join( ', ' ) }` );
 
-		// shop manager is allowed
+		// shop manager is refused
 		const nShop = sessionNonce( shop, 'store_audit_export' );
-		eq( ( await http( 'GET', url( 'store_audit_download', nShop ), { cookie: shop.cookie } ) ).status, 200, 'shop manager download' );
-		eq( ( await http( 'GET', url( 'store_audit_print', nShop ), { cookie: shop.cookie } ) ).status, 200, 'shop manager print' );
+		eq( ( await http( 'GET', url( 'store_audit_download', nShop ), { cookie: shop.cookie } ) ).status, 403, 'shop manager download' );
+		eq( ( await http( 'GET', url( 'store_audit_print', nShop ), { cookie: shop.cookie } ) ).status, 403, 'shop manager print' );
 		eq( pluginRows(), rows, 'exports changed plugin rows' );
 		logClean( mark, 'exports' );
 	}, 'tests/Destructive/s1.mjs; ExportsTest' );
 
 	// ---------------------------------------------------------------- 1.4 admin page
-	await scenario( '1.4', 'Admin page with hostile query strings', '200 for administrator and shop manager, 403 for subscriber, redirect to login for guests; nothing reflected; no PHP errors', async () => {
+	await scenario( '1.4', 'Admin page with hostile query strings', '200 for administrator, 403 for shop manager and subscriber, redirect to login for guests; nothing reflected; no PHP errors', async () => {
 		const mark = logMark();
 		const rows = pluginRows();
 		const queries = [ '', ...Object.entries( PAYLOADS ).filter( ( [ k ] ) => k !== 'one_mb' ).map( ( [ k, v ] ) => `&q=${ enc( v ) }&${ enc( v ) }=1` ), '&s[]=x&paged=-1&orderby[]=a', `&q=${ enc( PAYLOADS.one_mb.slice( 0, 7000 ) ) }` ];
@@ -293,7 +292,7 @@ export async function s1( S ) {
 			eq( g.status, 302, 'guest page redirect' );
 			ok( g.location.includes( 'wp-login.php' ), 'guest goes to login' );
 		}
-		eq( ( await http( 'GET', '/wp-admin/admin.php?page=store-audit', { cookie: shop.cookie } ) ).status, 200, 'shop manager page' );
+		eq( ( await http( 'GET', '/wp-admin/admin.php?page=store-audit', { cookie: shop.cookie } ) ).status, 403, 'shop manager page' );
 		for ( const bad of [ 'page=store-audit%00', 'page[]=store-audit', 'page=Store-Audit', 'page=store-audit%27', 'page=store-audit/../x' ] ) {
 			const r = await http( 'GET', `/wp-admin/admin.php?${ bad }`, { cookie: admin.cookie } );
 			oneOf( r.status, [ 200, 403, 404 ], `odd page value ${ bad }` );

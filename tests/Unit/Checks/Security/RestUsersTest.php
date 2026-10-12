@@ -51,9 +51,9 @@ final class RestUsersTest extends ProbeTestCase {
 	}
 
 	/**
-	 * Without a loopback the check is informational.
+	 * Without a loopback the check is not checked (an error row), never a pass.
 	 */
-	public function test_unreachable_is_info(): void {
-		$this->assertSame( 'info', ( new RestUsers( $this->broken_probe() ) )->run()->severity() );
+	public function test_unreachable_is_not_checked(): void {
+		$this->assertSame( 'error', ( new RestUsers( $this->broken_probe() ) )->run()->severity() );
 	}
 }

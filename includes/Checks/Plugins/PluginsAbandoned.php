@@ -106,7 +106,7 @@ final class PluginsAbandoned extends AbstractCheck {
 	 * Explanation.
 	 */
 	public function explanation(): string {
-		return __( 'A plugin that has not been updated for over a year probably has no developer looking after it, so new security flaws stay unfixed. Plugins closed on wordpress.org are often closed because of a security problem.', 'store-audit-for-woocommerce' );
+		return __( 'A plugin that has not been updated for over a year probably has no developer looking after it, so new security flaws stay unfixed. Plugins closed on wordpress.org for a security problem are dangerous to keep.', 'store-audit-for-woocommerce' );
 	}
 
 	/**
@@ -125,6 +125,7 @@ final class PluginsAbandoned extends AbstractCheck {
 		$cutoff    = strtotime( '-12 months', $this->now );
 
 		$closed      = array();
+		$closed_sec  = array();
 		$abandoned   = array();
 		$unchecked   = array();
 		$unavailable = 0;
@@ -136,6 +137,16 @@ final class PluginsAbandoned extends AbstractCheck {
 				continue;
 			}
 			$name = PluginInventory::name_of( $installed, $file );
+			$host = self::foreign_update_host( Arr::get_string( $installed[ $file ], 'UpdateURI' ) );
+			if ( '' !== $host ) {
+				$unchecked[] = sprintf(
+					/* translators: 1: plugin name, 2: host name that serves the updates. */
+					__( '%1$s: not checked, updates come from %2$s', 'store-audit-for-woocommerce' ),
+					$name,
+					$host
+				);
+				continue;
+			}
 			if ( $looked_up >= self::MAX_PLUGINS || ( Arr::to_float( ( $this->clock )() ) - $start ) > self::BUDGET_SECONDS ) {
 				++$skipped;
 				continue;
@@ -143,9 +154,13 @@ final class PluginsAbandoned extends AbstractCheck {
 			++$looked_up;
 
 			$info = $this->api->plugin( WporgApi::slug_from_file( $file ) );
+			if ( in_array( $info['status'], array( WporgApi::FOUND, WporgApi::CLOSED ), true ) && ! self::same_plugin( Arr::get_string( $installed[ $file ], 'Name' ), $info['name'] ) ) {
+				// Someone else's plugin has this slug on wordpress.org, so its dates and its closure say nothing about this one.
+				$info['status'] = WporgApi::NOT_FOUND;
+			}
 			switch ( $info['status'] ) {
 				case WporgApi::CLOSED:
-					$closed[] = '' !== $info['reason']
+					$line = '' !== $info['reason']
 						? sprintf(
 							/* translators: 1: plugin name, 2: reason text. */
 							__( '%1$s: closed on wordpress.org (%2$s)', 'store-audit-for-woocommerce' ),
@@ -157,6 +172,11 @@ final class PluginsAbandoned extends AbstractCheck {
 							__( '%s: closed on wordpress.org', 'store-audit-for-woocommerce' ),
 							$name
 						);
+					if ( $info['security'] ) {
+						$closed_sec[] = $line;
+					} else {
+						$closed[] = $line;
+					}
 					break;
 				case WporgApi::FOUND:
 					if ( $info['last_updated'] > 0 && $info['last_updated'] < $cutoff ) {
@@ -196,8 +216,19 @@ final class PluginsAbandoned extends AbstractCheck {
 			);
 		}
 
-		if ( array() !== $closed ) {
+		if ( array() !== $closed_sec ) {
 			return Result::critical(
+				sprintf(
+					/* translators: %d: number of plugins. */
+					_n( '%d plugin was closed on wordpress.org because of a security problem.', '%d plugins were closed on wordpress.org because of a security problem.', count( $closed_sec ), 'store-audit-for-woocommerce' ),
+					count( $closed_sec )
+				),
+				DetailList::cap( array_merge( $closed_sec, $closed, $abandoned, $notes ) )
+			);
+		}
+
+		if ( array() !== $closed ) {
+			return Result::warning(
 				sprintf(
 					/* translators: %d: number of plugins. */
 					_n( '%d plugin was closed on wordpress.org.', '%d plugins were closed on wordpress.org.', count( $closed ), 'store-audit-for-woocommerce' ),
@@ -226,5 +257,49 @@ final class PluginsAbandoned extends AbstractCheck {
 		}
 
 		return Result::ok( __( 'All plugins were updated within the last year.', 'store-audit-for-woocommerce' ) );
+	}
+
+	/**
+	 * Host that serves the updates of a plugin whose "Update URI" header points away from wordpress.org, else an
+	 * empty string. A value that is not an address ("false" switches updates off) is returned as written.
+	 *
+	 * @param string $update_uri Value of the Update URI header.
+	 */
+	private static function foreign_update_host( string $update_uri ): string {
+		$update_uri = trim( $update_uri );
+		if ( '' === $update_uri ) {
+			return '';
+		}
+		$host = wp_parse_url( $update_uri, PHP_URL_HOST );
+		if ( ! is_string( $host ) || '' === $host ) {
+			return $update_uri;
+		}
+		$host = strtolower( $host );
+		return ( 'wordpress.org' === $host || 'w.org' === $host || str_ends_with( $host, '.wordpress.org' ) || str_ends_with( $host, '.w.org' ) ) ? '' : $host;
+	}
+
+	/**
+	 * Whether the name in the plugin header and the name wordpress.org gives the slug are the same plugin: equal
+	 * ignoring case and punctuation, or one contains the other. An unknown name counts as a match.
+	 *
+	 * @param string $header_name Name header of the installed plugin.
+	 * @param string $api_name    Name wordpress.org reports.
+	 */
+	private static function same_plugin( string $header_name, string $api_name ): bool {
+		$local  = self::normalise( $header_name );
+		$remote = self::normalise( $api_name );
+		if ( '' === $local || '' === $remote ) {
+			return true;
+		}
+		return str_contains( $local, $remote ) || str_contains( $remote, $local );
+	}
+
+	/**
+	 * Lower-case letters and digits only.
+	 *
+	 * @param string $name Name.
+	 */
+	private static function normalise( string $name ): string {
+		return (string) preg_replace( '/[^\p{L}\p{N}]+/u', '', mb_strtolower( html_entity_decode( $name, ENT_QUOTES, 'UTF-8' ) ) );
 	}
 }

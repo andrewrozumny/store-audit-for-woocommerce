@@ -172,7 +172,12 @@ final class RunStorageTest extends TestCase {
 		$this->assertNotSame( '', $by_id['plugins_c']['summary'] );
 		$score = $report['score'];
 		$this->assertIsArray( $score );
-		$this->assertArrayNotHasKey( 'environment', (array) $score['sections'], 'a section with nothing checked must have no score' );
+		$sections = (array) $score['sections'];
+		$this->assertArrayHasKey( 'environment', $sections, 'a section with nothing checked must stay visible' );
+		$this->assertNull( ( (array) $sections['environment'] )['score'], 'a section with nothing checked must have no score' );
+		$this->assertTrue( $score['incomplete'], 'a report with checks missing is marked incomplete' );
+		$this->assertSame( 1, $score['checked'] );
+		$this->assertSame( 3, $score['total'] );
 	}
 
 	/**

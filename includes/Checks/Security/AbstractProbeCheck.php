@@ -37,13 +37,23 @@ abstract class AbstractProbeCheck extends AbstractSecurityCheck {
 	}
 
 	/**
-	 * Result used when the site cannot call itself.
+	 * Result used when a probe got no answer. An address on another host (uploads on a CDN, REST on its own host)
+	 * is simply not applicable; a site that cannot reach itself is "not checked", never a pass.
 	 *
 	 * @param ProbeResponse $response The failed probe.
 	 */
 	protected function unreachable( ProbeResponse $response ): Result {
-		return Result::info(
-			__( 'Could not reach the site from itself (loopback blocked), so this check was skipped.', 'store-audit-for-woocommerce' ),
+		if ( '' !== $response->foreign() ) {
+			return Result::info(
+				sprintf(
+					/* translators: %s: host name. */
+					__( 'Not applicable: this address is served from another host (%s), so it cannot be checked from this site.', 'store-audit-for-woocommerce' ),
+					$response->foreign()
+				)
+			);
+		}
+		return Result::error(
+			__( 'Not checked: the site could not reach itself, so this check was skipped. A firewall, a security plugin or the host may block requests from the site to its own address.', 'store-audit-for-woocommerce' ),
 			array( $response->error() )
 		);
 	}

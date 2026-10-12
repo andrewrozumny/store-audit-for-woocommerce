@@ -64,12 +64,12 @@ final class Cli {
 		}
 
 		if ( 'json' === $format ) {
-			\WP_CLI::line( Report::to_json( $report ) );
+			\WP_CLI::line( Report::to_json( $report, false ) );
 			return;
 		}
 
 		if ( 'markdown' === $format ) {
-			\WP_CLI::line( rtrim( Report::to_markdown( $report ) ) );
+			\WP_CLI::line( rtrim( Report::to_markdown( $report, false ) ) );
 			return;
 		}
 
@@ -84,7 +84,23 @@ final class Cli {
 			);
 		}
 		\WP_CLI\Utils\format_items( 'table', $rows, array( 'section', 'severity', 'title', 'summary' ) );
-		\WP_CLI::log( sprintf( 'Overall score: %d / 100', Arr::get_int( Arr::get_map( $report, 'score' ), 'overall' ) ) );
-		\WP_CLI::log( Report::attribution() );
+		$score = Arr::get_map( $report, 'score' );
+		$note  = Report::incomplete_note( $score );
+		\WP_CLI::log(
+			sprintf(
+				/* translators: %d: overall score. */
+				__( 'Overall score: %d / 100', 'store-audit-for-woocommerce' ),
+				Arr::get_int( $score, 'overall' )
+			) . ( '' !== $note ? ' (' . $note . ')' : '' )
+		);
+		foreach ( Arr::get_map( $score, 'sections' ) as $id => $section ) {
+			$section = Arr::to_string_keyed( $section );
+			if ( Arr::get_bool( $section, 'incomplete' ) ) {
+				\WP_CLI::log( ( $labels[ $id ] ?? $id ) . ': ' . Score::incomplete_note( Arr::get_int( $section, 'checked' ), Arr::get_int( $section, 'total' ) ) );
+			}
+		}
+		if ( Report::show_attribution() ) {
+			\WP_CLI::log( Report::attribution() );
+		}
 	}
 }

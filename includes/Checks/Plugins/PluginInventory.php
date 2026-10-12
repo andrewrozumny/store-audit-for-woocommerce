@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Plugins;
 
 use StoreAudit\Support\Arr;
+use StoreAudit\Support\NotCheckedException;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -43,7 +44,7 @@ final class PluginInventory {
 	public function __construct( ?callable $installed = null, ?callable $active = null ) {
 		$this->installed = $installed ?? static function (): array {
 			if ( ! function_exists( 'get_plugins' ) ) {
-				throw new \RuntimeException( 'The WordPress plugin functions are not loaded.' );
+				throw new NotCheckedException( esc_html__( 'the WordPress plugin functions are not loaded.', 'store-audit-for-woocommerce' ) );
 			}
 			return get_plugins();
 		};

@@ -72,37 +72,73 @@ final class UninstallTest extends TestCase {
 	}
 
 	/**
-	 * Options, run rows and every cached wordpress.org answer (with its timeout row) are removed.
+	 * The two options are removed by exact name; the run rows and cached wordpress.org answers by prefix.
 	 */
 	public function test_single_site_removes_options_and_transients(): void {
-		$names = array(
-			'store_audit_last_report',
-			'store_audit_current_run',
+		$found = array(
 			'store_audit_run_result_security_b',
 			'_transient_store_audit_wporg_abc',
 			'_transient_timeout_store_audit_wporg_abc',
 		);
-		$this->fake_db( $names );
+		$this->fake_db( $found );
 		Functions\when( 'is_multisite' )->justReturn( false );
 
 		Uninstall::run();
 
-		sort( $names );
+		$expected = array_merge( array( 'store_audit_last_report', 'store_audit_current_run' ), $found );
+		sort( $expected );
 		$deleted = $this->deleted;
 		sort( $deleted );
-		$this->assertSame( $names, $deleted );
+		$this->assertSame( $expected, $deleted );
+		$this->assertContains( 'store_audit_run_result_', $this->patterns_without_wildcard() );
+		$this->assertContains( '_transient_store_audit_wporg_', $this->patterns_without_wildcard() );
+		$this->assertContains( '_transient_timeout_store_audit_wporg_', $this->patterns_without_wildcard() );
 		foreach ( array_filter( $this->patterns, static fn( string $p ): bool => str_contains( $p, 'store' ) ) as $pattern ) {
 			$this->assertStringStartsNotWith( '%', $pattern, 'patterns must be anchored at the start so other plugins are not touched' );
 			$this->assertStringEndsWith( '%', $pattern );
+			$this->assertNotSame( 'store\_audit\_%', $pattern, 'the broad store_audit_ prefix must not be used' );
 		}
-		$this->assertNotEmpty( $this->patterns );
 	}
 
 	/**
-	 * Every site of a network is cleaned, and the current site is restored.
+	 * Patterns the query was built with, without the trailing wildcard and without the escaping of underscores.
+	 *
+	 * @return list<string>
 	 */
-	public function test_multisite_cleans_every_site(): void {
-		$this->fake_db( array( 'store_audit_last_report' ) );
+	private function patterns_without_wildcard(): array {
+		return array_map( static fn( string $pattern ): string => str_replace( '\\_', '_', rtrim( $pattern, '%' ) ), array_values( array_filter( $this->patterns, static fn( string $p ): bool => str_ends_with( $p, '%' ) ) ) );
+	}
+
+	/**
+	 * Every site of a network is cleaned in batches of 100, and the current site is restored each time.
+	 */
+	public function test_multisite_cleans_every_site_in_batches(): void {
+		$this->fake_db( array() );
+		Functions\when( 'is_multisite' )->justReturn( true );
+		$calls = array();
+		Functions\when( 'get_sites' )->alias(
+			static function ( array $args ) use ( &$calls ): array {
+				$calls[] = $args;
+				return 0 === $args['offset'] ? range( 1, 100 ) : array( 101, 102, 103 );
+			}
+		);
+		Functions\expect( 'switch_to_blog' )->times( 103 );
+		Functions\expect( 'restore_current_blog' )->times( 103 );
+
+		Uninstall::run();
+
+		$this->assertCount( 2, $calls );
+		$this->assertSame( 100, $calls[0]['number'] );
+		$this->assertSame( 0, $calls[0]['offset'] );
+		$this->assertSame( 100, $calls[1]['offset'] );
+		$this->assertCount( 206, $this->deleted, 'two options per site' );
+	}
+
+	/**
+	 * A network of fewer than 100 sites needs a single query.
+	 */
+	public function test_small_network_is_one_query(): void {
+		$this->fake_db( array() );
 		Functions\when( 'is_multisite' )->justReturn( true );
 		Functions\expect( 'get_sites' )->once()->andReturn( array( 1, 2, 5 ) );
 		Functions\expect( 'switch_to_blog' )->times( 3 );
@@ -110,6 +146,6 @@ final class UninstallTest extends TestCase {
 
 		Uninstall::run();
 
-		$this->assertSame( array( 'store_audit_last_report', 'store_audit_last_report', 'store_audit_last_report' ), $this->deleted );
+		$this->assertCount( 6, $this->deleted );
 	}
 }

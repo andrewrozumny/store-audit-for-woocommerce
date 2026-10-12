@@ -48,9 +48,9 @@ final class TableSizesTest extends TestCase {
 	}
 
 	/**
-	 * Normal sizes are info.
+	 * Normal sizes are fine: a neutral fact is not a penalty.
 	 */
-	public function test_normal_sizes_are_info(): void {
+	public function test_normal_sizes_are_ok(): void {
 		$result = $this->run_with(
 			array(
 				'sizes' => array(
@@ -61,7 +61,7 @@ final class TableSizesTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'info', $result->severity() );
+		$this->assertSame( 'ok', $result->severity() );
 		$this->assertStringContainsString( 'postmeta: 50 MB', $result->summary() . implode( ' ', $result->details() ) );
 	}
 

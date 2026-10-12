@@ -19,7 +19,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The only external host this plugin talks to is api.wordpress.org.
  *
  * Lookups return a small array: status (found, closed, not_found, unavailable),
- * version, last_updated (unix timestamp or 0) and reason. Results (including
+ * version, last_updated (unix timestamp or 0), reason, the name wordpress.org knows the slug by, and whether a
+ * closed plugin was closed because of a security problem. Results (including
  * "not found") are cached in a transient for 12 hours; failures are not cached.
  */
 final class WporgApi {
@@ -98,7 +99,7 @@ final class WporgApi {
 	 * Look up a plugin.
 	 *
 	 * @param string $slug Plugin slug.
-	 * @return array{status:string,version:string,last_updated:int,reason:string}
+	 * @return array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool}
 	 */
 	public function plugin( string $slug ): array {
 		$url = add_query_arg(
@@ -115,7 +116,7 @@ final class WporgApi {
 	 * Look up a theme.
 	 *
 	 * @param string $slug Theme slug.
-	 * @return array{status:string,version:string,last_updated:int,reason:string}
+	 * @return array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool}
 	 */
 	public function theme( string $slug ): array {
 		$url = add_query_arg(
@@ -134,7 +135,7 @@ final class WporgApi {
 	 * @param string $type "plugin" or "theme".
 	 * @param string $slug Slug.
 	 * @param string $url  Request URL.
-	 * @return array{status:string,version:string,last_updated:int,reason:string}
+	 * @return array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool}
 	 */
 	private function lookup( string $type, string $slug, string $url ): array {
 		$key    = 'store_audit_wporg_' . md5( $type . ':' . $slug );
@@ -145,6 +146,8 @@ final class WporgApi {
 				'version'      => Arr::get_string( $cached, 'version' ),
 				'last_updated' => Arr::get_int( $cached, 'last_updated' ),
 				'reason'       => Arr::get_string( $cached, 'reason' ),
+				'name'         => Arr::get_string( $cached, 'name' ),
+				'security'     => Arr::get_bool( $cached, 'security' ),
 			);
 		}
 
@@ -161,7 +164,7 @@ final class WporgApi {
 	 * Turn an HTTP response into the normalised array.
 	 *
 	 * @param mixed $response Response from the fetcher: array{code:int,body:string} or null.
-	 * @return array{status:string,version:string,last_updated:int,reason:string}
+	 * @return array{status:string,version:string,last_updated:int,reason:string,name:string,security:bool}
 	 */
 	private function parse( mixed $response ): array {
 		$empty = array(
@@ -169,6 +172,8 @@ final class WporgApi {
 			'version'      => '',
 			'last_updated' => 0,
 			'reason'       => '',
+			'name'         => '',
+			'security'     => false,
 		);
 		if ( ! is_array( $response ) ) {
 			return $empty;
@@ -185,8 +190,10 @@ final class WporgApi {
 				return array_merge(
 					$empty,
 					array(
-						'status' => self::CLOSED,
-						'reason' => isset( $data['reason_text'] ) && is_string( $data['reason_text'] ) ? self::short_text( $data['reason_text'] ) : '',
+						'status'   => self::CLOSED,
+						'reason'   => isset( $data['reason_text'] ) && is_string( $data['reason_text'] ) ? self::short_text( $data['reason_text'] ) : '',
+						'name'     => self::short_text( Arr::get_string( $data, 'name' ) ),
+						'security' => false !== stripos( Arr::get_string( $data, 'reason' ) . ' ' . Arr::get_string( $data, 'reason_text' ), 'security' ),
 					)
 				);
 			}
@@ -211,6 +218,8 @@ final class WporgApi {
 			'version'      => isset( $data['version'] ) && is_string( $data['version'] ) ? $data['version'] : '',
 			'last_updated' => $last_updated,
 			'reason'       => '',
+			'name'         => self::short_text( Arr::get_string( $data, 'name' ) ),
+			'security'     => false,
 		);
 	}
 

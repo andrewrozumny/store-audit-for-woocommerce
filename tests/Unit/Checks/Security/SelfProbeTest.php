@@ -101,4 +101,44 @@ final class SelfProbeTest extends ProbeTestCase {
 		$this->assertFalse( $response->reachable() );
 		$this->assertSame( 'cURL error 60', $response->error() );
 	}
+
+	/**
+	 * An address on another host is not requested and is reported as such (not as a blocked loopback).
+	 */
+	public function test_other_host_is_marked_foreign(): void {
+		$response = $this->probe( array() )->get( 'https://cdn.example.net/uploads/' );
+
+		$this->assertFalse( $response->reachable() );
+		$this->assertSame( 'cdn.example.net', $response->foreign() );
+		$this->assertSame( array(), $this->requests );
+		$this->assertSame( '', $this->probe( array() )->get( '/a' )->foreign() );
+		$this->assertSame( '', $this->probe( array() )->get( 'ftp://shop.test/x' )->foreign(), 'not an http address at all' );
+	}
+
+	/**
+	 * Same host on another port or with the other scheme is another origin and is never requested.
+	 */
+	public function test_port_and_scheme_must_match(): void {
+		$probe = $this->probe( array() );
+
+		foreach ( array( 'https://shop.test:6379/x', 'https://shop.test:8443/wp-json/', 'http://shop.test/x', 'http://shop.test:443/x' ) as $target ) {
+			$this->assertFalse( $probe->get( $target )->reachable(), $target );
+		}
+		$this->assertSame( array(), $this->requests );
+
+		$this->assertTrue( $probe->get( 'https://shop.test:443/a' )->reachable(), 'the default port written out is the same origin' );
+		$this->assertTrue( $probe->get( 'https://SHOP.test/a' )->reachable(), 'host case does not matter' );
+	}
+
+	/**
+	 * Home and site address may use different schemes; both origins are the site's own.
+	 */
+	public function test_home_and_site_url_variants_are_both_own(): void {
+		Functions\when( 'home_url' )->alias( static fn ( string $path = '' ): string => 'http://shop.test' . $path );
+		$probe = $this->probe( array() );
+
+		$this->assertTrue( $probe->get( 'http://shop.test/a' )->reachable(), 'scheme of home_url' );
+		$this->assertTrue( $probe->get( 'https://shop.test/a' )->reachable(), 'scheme of site_url' );
+		$this->assertFalse( $probe->get( 'http://shop.test:8080/a' )->reachable() );
+	}
 }

@@ -97,4 +97,56 @@ final class PluginsThemeChildTest extends TestCase {
 		$this->assertSame( array( 'functions.php' ), $result->details() );
 		$this->assertStringContainsString( 'look edited', $result->summary() );
 	}
+
+	/**
+	 * A folder inside the theme that cannot be read is skipped; the rest is still listed.
+	 */
+	public function test_unreadable_folder_is_skipped(): void {
+		// phpcs:disable WordPress.WP.AlternativeFunctions -- The test builds and removes a real temporary folder.
+		$dir = sys_get_temp_dir() . '/sa-theme-' . uniqid( '', true );
+		mkdir( $dir . '/readable', 0777, true );
+		mkdir( $dir . '/locked', 0777, true );
+		file_put_contents( $dir . '/style.css', '/* theme */' );
+		file_put_contents( $dir . '/readable/page.php', '<?php' );
+		file_put_contents( $dir . '/locked/secret.php', '<?php' );
+		chmod( $dir . '/locked', 0000 );
+
+		try {
+			if ( is_readable( $dir . '/locked' ) ) {
+				$this->markTestSkipped( 'Folder permissions are not enforced for this user.' );
+			}
+			Functions\when( 'add_query_arg' )->justReturn( 'https://api.wordpress.org/themes/' );
+			$api   = new WporgApi(
+				static fn(): array => array(
+					'code' => 200,
+					'body' => '{"version":"4.6.2"}',
+				),
+				static fn() => false,
+				static function (): void {}
+			);
+			$check = new PluginsThemeChild(
+				static fn(): array => array(
+					'template'   => 'storefront',
+					'stylesheet' => 'storefront',
+					'name'       => 'Storefront',
+				),
+				null,
+				$api,
+				static fn(): string => $dir
+			);
+
+			$result = $check->run();
+
+			$this->assertNotSame( 'error', $result->severity() );
+		} finally {
+			chmod( $dir . '/locked', 0777 );
+			unlink( $dir . '/locked/secret.php' );
+			rmdir( $dir . '/locked' );
+			unlink( $dir . '/readable/page.php' );
+			rmdir( $dir . '/readable' );
+			unlink( $dir . '/style.css' );
+			rmdir( $dir );
+		}
+		// phpcs:enable WordPress.WP.AlternativeFunctions
+	}
 }

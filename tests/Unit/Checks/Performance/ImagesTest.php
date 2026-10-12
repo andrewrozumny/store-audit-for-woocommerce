@@ -469,4 +469,95 @@ final class ImagesTest extends TestCase {
 		$this->assertNotSame( '', $check->fix_hint() );
 		$this->assertDoesNotMatchRegularExpression( '/[\x{2013}\x{2014}]/u', $check->explanation() . $check->fix_hint() . $check->title() );
 	}
+
+	/**
+	 * Ten JPEG images with dimensions and no WebP or AVIF in the media library.
+	 *
+	 * @return list<array<string,mixed>>
+	 */
+	private static function old_jpegs(): array {
+		return array_fill(
+			0,
+			10,
+			array(
+				'mime' => 'image/jpeg',
+				'meta' => array(
+					'width'  => 800,
+					'height' => 600,
+				),
+			)
+		);
+	}
+
+	/**
+	 * An optimizer that serves WebP through rewrite rules leaves nothing in the media library, so the missing
+	 * WebP is not reported: the check says what it could not see.
+	 */
+	public function test_optimizer_serving_webp_replaces_the_warning_with_a_note(): void {
+		$result = $this->run_with(
+			array(
+				'images'    => self::old_jpegs(),
+				'optimizer' => 'ShortPixel',
+			)
+		);
+
+		$this->assertSame( 'info', $result->severity() );
+		$this->assertStringContainsString( 'served as WebP by ShortPixel, not checked', $result->summary() );
+		$this->assertStringNotContainsString( 'no WebP', $result->summary() );
+	}
+
+	/**
+	 * Missing dimensions are still reported next to an optimizer.
+	 */
+	public function test_optimizer_does_not_hide_missing_dimensions(): void {
+		$images = array_fill(
+			0,
+			10,
+			array(
+				'mime' => 'image/jpeg',
+				'meta' => null,
+			)
+		);
+
+		$result = $this->run_with(
+			array(
+				'images'    => $images,
+				'optimizer' => 'Imagify',
+			)
+		);
+
+		$this->assertSame( 'warning', $result->severity() );
+	}
+
+	/**
+	 * The live reader names the optimizer from the active plugins.
+	 */
+	public function test_live_reader_finds_the_optimizer(): void {
+		if ( ! defined( 'ARRAY_A' ) ) {
+			define( 'ARRAY_A', 'ARRAY_A' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- WordPress core constant for the test.
+		}
+		$db           = \Mockery::mock( 'wpdb' );
+		$db->posts    = 'wp_posts';
+		$db->postmeta = 'wp_postmeta';
+		$db->shouldReceive( 'prepare' )->andReturnUsing( static fn( string $query ): string => $query );
+		$db->shouldReceive( 'get_results' )->andReturn(
+			array(
+				array(
+					'mime' => 'image/jpeg',
+					'meta' => null,
+				),
+			)
+		);
+		$GLOBALS['wpdb'] = $db; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Test double.
+		Functions\when( 'maybe_unserialize' )->returnArg();
+		Functions\when( 'is_multisite' )->justReturn( false );
+		Functions\when( 'get_option' )->alias(
+			static fn ( string $name, $fallback ) => 'active_plugins' === $name ? array( 'ewww-image-optimizer/ewww-image-optimizer.php' ) : $fallback
+		);
+
+		$result = ( new Images() )->run();
+		unset( $GLOBALS['wpdb'] );
+
+		$this->assertStringContainsString( 'EWWW Image Optimizer', $result->summary() );
+	}
 }

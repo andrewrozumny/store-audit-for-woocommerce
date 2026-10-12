@@ -20,12 +20,12 @@ use StoreAudit\Tests\Unit\TestCase;
 final class GuestCheckoutTest extends TestCase {
 
 	/**
-	 * Guest checkout allowed.
+	 * Guest checkout allowed is a plain fact, not a finding.
 	 */
-	public function test_guest_allowed_is_info(): void {
+	public function test_guest_allowed_is_ok(): void {
 		$check = new GuestCheckout( static fn( string $name ) => 'woocommerce_enable_guest_checkout' === $name ? 'yes' : 'no' );
 
-		$this->assertSame( 'info', $check->run()->severity() );
+		$this->assertSame( 'ok', $check->run()->severity() );
 	}
 
 	/**

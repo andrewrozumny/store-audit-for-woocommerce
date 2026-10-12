@@ -132,6 +132,6 @@ final class OrdersStorage extends AbstractCheck {
 		if ( $orders > 100000 && ! $hpos ) {
 			return Result::warning( $summary . ' ' . __( 'With this many orders the legacy storage slows down the admin and reports.', 'store-audit-for-woocommerce' ) );
 		}
-		return Result::info( $summary );
+		return Result::ok( $summary );
 	}
 }

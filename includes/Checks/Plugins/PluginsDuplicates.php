@@ -25,12 +25,12 @@ final class PluginsDuplicates extends AbstractCheck {
 
 	/**
 	 * Known plugin slugs per category. Extend here or with the store_audit_duplicate_groups filter.
-	 * Autoptimize is deliberately not a cache plugin and is left out.
+	 * Autoptimize is deliberately not a cache plugin and is left out, and Sucuri Scanner is a scanner, not a firewall.
 	 */
 	private const GROUPS = array(
 		'SEO'      => array( 'wordpress-seo', 'seo-by-rank-math', 'all-in-one-seo-pack', 'autodescription', 'wp-seopress', 'slim-seo' ),
 		'Caching'  => array( 'wp-rocket', 'w3-total-cache', 'wp-super-cache', 'litespeed-cache', 'wp-fastest-cache', 'sg-cachepress', 'breeze', 'cache-enabler', 'hummingbird-performance' ),
-		'Security' => array( 'wordfence', 'better-wp-security', 'sucuri-scanner', 'all-in-one-wp-security-and-firewall', 'ithemes-security-pro', 'defender-security', 'wp-cerber', 'solid-security' ),
+		'Security' => array( 'wordfence', 'better-wp-security', 'all-in-one-wp-security-and-firewall', 'ithemes-security-pro', 'defender-security', 'wp-cerber', 'solid-security' ),
 		'Backup'   => array( 'updraftplus', 'backwpup', 'duplicator', 'all-in-one-wp-migration', 'backup-backup', 'jetpack-backup' ),
 		'SMTP'     => array( 'wp-mail-smtp', 'post-smtp', 'fluent-smtp', 'easy-wp-smtp' ),
 	);

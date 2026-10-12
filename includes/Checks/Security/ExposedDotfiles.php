@@ -21,11 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class ExposedDotfiles extends AbstractProbeCheck {
 
 	/**
-	 * Site root path.
+	 * Site root path (tests); null reads the site root and ABSPATH.
 	 *
-	 * @var string
+	 * @var string|null
 	 */
-	private string $root;
+	private ?string $root;
 
 	/**
 	 * Existence test.
@@ -43,7 +43,7 @@ final class ExposedDotfiles extends AbstractProbeCheck {
 	 */
 	public function __construct( ?SelfProbe $probe = null, ?string $root = null, ?callable $exists = null ) {
 		parent::__construct( $probe );
-		$this->root   = $root ?? (string) ABSPATH;
+		$this->root   = $root;
 		$this->exists = $exists ?? 'file_exists';
 	}
 
@@ -81,12 +81,13 @@ final class ExposedDotfiles extends AbstractProbeCheck {
 	public function run(): Result {
 		$served = array();
 		$rules  = array(
-			'/.git/HEAD'   => static fn ( string $body ): bool => str_starts_with( ltrim( $body ), 'ref:' ),
-			'/.git/config' => static fn ( string $body ): bool => str_contains( $body, '[core]' ),
-			'/.env'        => static fn ( string $body ): bool => '' !== trim( $body ) && 1 !== preg_match( '/<\s*(!doctype|html|head|body)/i', substr( $body, 0, 512 ) ),
+			'/.git/HEAD'   => static fn ( string $body ): bool => 1 === preg_match( '/^\s*(ref: \S|[0-9a-f]{40}\s*$)/', $body ),
+			'/.git/config' => static fn ( string $body ): bool => 1 === preg_match( '/^\s*\[core\]/m', $body ),
+			'/.env'        => static fn ( string $body ): bool => 1 === preg_match( '/^[A-Z_][A-Z0-9_]*\s*=/m', substr( $body, 0, 2048 ) ),
 		);
 		foreach ( $rules as $path => $looks_exposed ) {
-			$response = $this->probe->get( $path, 512, 2 );
+			// The public site is served from the home address, which can sit in a sub folder of the WordPress address.
+			$response = $this->probe->get( home_url( $path ), 2048, 2 );
 			if ( ! $response->reachable() ) {
 				return $this->unreachable( $response );
 			}
@@ -105,8 +106,11 @@ final class ExposedDotfiles extends AbstractProbeCheck {
 
 		$on_disk = array();
 		foreach ( array( '.git', '.env' ) as $name ) {
-			if ( call_user_func( $this->exists, trailingslashit( $this->root ) . $name ) ) {
-				$on_disk[] = $name;
+			foreach ( $this->roots() as $root ) {
+				if ( call_user_func( $this->exists, trailingslashit( $root ) . $name ) ) {
+					$on_disk[] = $name;
+					break;
+				}
 			}
 		}
 		if ( array() !== $on_disk ) {
@@ -117,5 +121,25 @@ final class ExposedDotfiles extends AbstractProbeCheck {
 			);
 		}
 		return Result::ok( __( 'No .git or .env files are reachable from the web.', 'store-audit-for-woocommerce' ) );
+	}
+
+	/**
+	 * Folders to look in: the root the home page is served from, and ABSPATH when that is another folder.
+	 *
+	 * @return list<string>
+	 */
+	private function roots(): array {
+		if ( null !== $this->root ) {
+			return array( $this->root );
+		}
+		$roots = array();
+		if ( function_exists( 'get_home_path' ) ) {
+			$roots[] = get_home_path();
+		}
+		$abspath = (string) ABSPATH;
+		if ( ! in_array( $abspath, $roots, true ) ) {
+			$roots[] = $abspath;
+		}
+		return $roots;
 	}
 }

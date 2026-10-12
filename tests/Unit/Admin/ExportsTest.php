@@ -110,4 +110,62 @@ final class ExportsTest extends TestCase {
 			$_REQUEST = array();
 		}
 	}
+
+	/**
+	 * Exports need manage_options; a shop manager gets 403.
+	 */
+	public function test_shop_manager_cannot_export(): void {
+		Functions\when( 'current_user_can' )->alias( static fn( string $cap ): bool => 'manage_options' === $cap ? false : true );
+		Functions\expect( 'check_admin_referer' )->never();
+		Functions\expect( 'wp_die' )->once()->with( \Mockery::type( 'string' ), '', array( 'response' => 403 ) )->andThrow( new \RuntimeException( 'died' ) );
+
+		$this->expectException( \RuntimeException::class );
+		( new Exports() )->authorize();
+	}
+
+	/**
+	 * The printed report leaves out the details of sensitive checks and marks an incomplete score.
+	 */
+	public function test_print_body_redacts_and_marks_incomplete(): void {
+		Functions\when( 'esc_url' )->returnArg();
+		Functions\when( 'esc_attr' )->returnArg();
+		Functions\when( 'get_option' )->justReturn( 'Y-m-d' );
+		Functions\when( 'wp_date' )->justReturn( '2026-10-12' );
+		Functions\when( 'wp_kses' )->returnArg();
+
+		$report = array(
+			'generated_at' => '2026-10-12T08:30:00Z',
+			'site_url'     => 'https://shop.example.com',
+			'score'        => array(
+				'overall'    => 80,
+				'checked'    => 9,
+				'total'      => 20,
+				'incomplete' => true,
+				'sections'   => array(
+					'security' => array(
+						'label'  => 'Security',
+						'score'  => null,
+						'counts' => array(),
+					),
+				),
+			),
+			'results'      => array(
+				array(
+					'section'   => 'security',
+					'severity'  => 'warning',
+					'title'     => 'Admin accounts',
+					'summary'   => 'Sum',
+					'details'   => array( 'jdoe', 'shopowner' ),
+					'fix_hint'  => '',
+					'sensitive' => true,
+				),
+			),
+		);
+		$html   = Exports::render_body( $report );
+
+		$this->assertStringNotContainsString( 'jdoe', $html );
+		$this->assertStringContainsString( '2 items. Details are shown only on the Store Audit screen in wp-admin.', $html );
+		$this->assertStringContainsString( 'Incomplete: 9 of 20 checks ran', $html );
+		$this->assertStringContainsString( 'incomplete', $html );
+	}
 }

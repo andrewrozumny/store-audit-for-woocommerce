@@ -94,11 +94,18 @@ final class AdminUsername extends AbstractSecurityCheck {
 			}
 		}
 
-		$exposed = array();
+		$exposed  = array();
+		$archives = array();
 		foreach ( $admins as $admin ) {
 			$login = strtolower( $admin['login'] );
-			if ( '' !== $login && ( strtolower( $admin['display_name'] ) === $login || strtolower( $admin['nicename'] ) === $login ) ) {
+			if ( '' === $login ) {
+				continue;
+			}
+			if ( strtolower( $admin['display_name'] ) === $login ) {
 				$exposed[] = $admin['login'];
+			}
+			if ( strtolower( $admin['nicename'] ) === $login ) {
+				$archives[] = $admin['login'];
 			}
 		}
 
@@ -114,6 +121,10 @@ final class AdminUsername extends AbstractSecurityCheck {
 		foreach ( $exposed as $login ) {
 			/* translators: %s: login name. */
 			$details[] = sprintf( __( 'Login "%s" is also shown publicly as the author name', 'store-audit-for-woocommerce' ), $login );
+		}
+		foreach ( $archives as $login ) {
+			/* translators: %s: login name. */
+			$details[] = sprintf( __( 'The author archive address of "%s" shows the login. To hide it, change the user slug with a plugin that edits user slugs, or turn off author archives.', 'store-audit-for-woocommerce' ), $login );
 		}
 		$details = $this->cap_list( $details );
 
@@ -131,6 +142,21 @@ final class AdminUsername extends AbstractSecurityCheck {
 				__( 'In Users > Profile, set a nickname and choose it under "Display name publicly as", so the login stays private.', 'store-audit-for-woocommerce' )
 			);
 		}
+		if ( array() !== $archives ) {
+			return Result::info(
+				/* translators: %d: number of administrators. */
+				sprintf( _n( 'The author archive address of %d administrator shows the login.', 'The author archive addresses of %d administrators show the login.', count( $archives ), 'store-audit-for-woocommerce' ), count( $archives ) ),
+				$details,
+				__( 'Change the user slug with a plugin that edits user slugs, or turn off author archives.', 'store-audit-for-woocommerce' )
+			);
+		}
 		return Result::ok( __( 'No guessable administrator logins found.', 'store-audit-for-woocommerce' ) );
+	}
+
+	/**
+	 * Details name accounts, files or keys, so exports do not carry them.
+	 */
+	public function is_sensitive(): bool {
+		return true;
 	}
 }

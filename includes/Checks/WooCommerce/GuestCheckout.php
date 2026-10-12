@@ -96,7 +96,7 @@ final class GuestCheckout extends AbstractCheck {
 		}
 
 		if ( $guest ) {
-			return Result::info( __( 'Customers can check out as guests.', 'store-audit-for-woocommerce' ), $details );
+			return Result::ok( __( 'Customers can check out as guests.', 'store-audit-for-woocommerce' ), $details );
 		}
 
 		return Result::info( __( 'Customers must create an account to check out.', 'store-audit-for-woocommerce' ), $details );

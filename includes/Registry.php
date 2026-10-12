@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit;
 
 use StoreAudit\Checks\CheckInterface;
+use StoreAudit\Checks\Section;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -41,11 +42,63 @@ final class Registry {
 			return $keyed;
 		}
 		foreach ( $checks as $check ) {
-			if ( $check instanceof CheckInterface ) {
+			if ( $check instanceof CheckInterface && self::accept( $check, $keyed ) ) {
 				$keyed[ $check->id() ] = $check;
 			}
 		}
 		return $keyed;
+	}
+
+	/**
+	 * Whether a check may be registered. A check with an odd or repeated id, or in a section without a score
+	 * weight, is dropped and the developer is told, so a typo shows up in debug mode instead of as a silent gap.
+	 *
+	 * @param CheckInterface               $check Check.
+	 * @param array<string,CheckInterface> $keyed Checks accepted so far.
+	 */
+	private static function accept( CheckInterface $check, array $keyed ): bool {
+		$id = $check->id();
+		if ( 1 !== preg_match( '/^[a-z0-9_]+$/', $id ) ) {
+			self::reject(
+				sprintf(
+					/* translators: %s: check id. */
+					__( 'The check id "%s" is not valid. Use lower-case letters a-z, digits 0-9 and underscores only. The check was not added.', 'store-audit-for-woocommerce' ),
+					esc_html( $id )
+				)
+			);
+			return false;
+		}
+		if ( isset( $keyed[ $id ] ) ) {
+			self::reject(
+				sprintf(
+					/* translators: %s: check id. */
+					__( 'A check with the id "%s" is already registered. The second check was not added.', 'store-audit-for-woocommerce' ),
+					esc_html( $id )
+				)
+			);
+			return false;
+		}
+		if ( ! array_key_exists( $check->section(), Section::weights() ) ) {
+			self::reject(
+				sprintf(
+					/* translators: 1: check id, 2: section id. */
+					__( 'The check "%1$s" uses the unknown section "%2$s". The check was not added.', 'store-audit-for-woocommerce' ),
+					esc_html( $id ),
+					esc_html( $check->section() )
+				)
+			);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Tell the developer that a check was dropped.
+	 *
+	 * @param string $message Already escaped message.
+	 */
+	private static function reject( string $message ): void {
+		_doing_it_wrong( 'store_audit_checks', $message, '0.1.1' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic parts are escaped above.
 	}
 
 	/**

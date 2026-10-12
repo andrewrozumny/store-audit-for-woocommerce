@@ -180,4 +180,11 @@ final class InactiveAdmins extends AbstractSecurityCheck {
 		}
 		return array();
 	}
+
+	/**
+	 * Details name accounts, files or keys, so exports do not carry them.
+	 */
+	public function is_sensitive(): bool {
+		return true;
+	}
 }

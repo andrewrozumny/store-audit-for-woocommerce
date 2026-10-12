@@ -57,4 +57,32 @@ final class PluginsDuplicatesTest extends TestCase {
 		$this->assertSame( 'warning', $result->severity() );
 		$this->assertStringStartsWith( 'SEO: ', $result->details()[0] );
 	}
+
+	/**
+	 * A scanner reports problems but is no firewall, so a scanner next to a firewall is not a duplicate.
+	 */
+	public function test_sucuri_scanner_next_to_a_firewall_is_not_a_duplicate(): void {
+		$active    = array( 'wordfence/wordfence.php', 'sucuri-scanner/sucuri.php' );
+		$installed = array(
+			'wordfence/wordfence.php'   => array( 'Name' => 'Wordfence' ),
+			'sucuri-scanner/sucuri.php' => array( 'Name' => 'Sucuri Scanner' ),
+		);
+		$check     = new PluginsDuplicates( new PluginInventory( static fn(): array => $installed, static fn(): array => $active ) );
+
+		$this->assertSame( 'ok', $check->run()->severity() );
+	}
+
+	/**
+	 * Two real firewalls still are.
+	 */
+	public function test_two_firewalls_are_still_a_duplicate(): void {
+		$active    = array( 'wordfence/wordfence.php', 'wp-cerber/wp-cerber.php' );
+		$installed = array(
+			'wordfence/wordfence.php' => array( 'Name' => 'Wordfence' ),
+			'wp-cerber/wp-cerber.php' => array( 'Name' => 'Cerber' ),
+		);
+		$check     = new PluginsDuplicates( new PluginInventory( static fn(): array => $installed, static fn(): array => $active ) );
+
+		$this->assertSame( 'warning', $check->run()->severity() );
+	}
 }

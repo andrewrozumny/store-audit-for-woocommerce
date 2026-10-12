@@ -73,6 +73,47 @@ final class AdminUsernameTest extends TestCase {
 	}
 
 	/**
+	 * A login that only shows up in the author archive address is no warning: the nickname advice could not remove it.
+	 */
+	public function test_login_in_author_slug_only_is_info_with_honest_advice(): void {
+		$bob   = $this->user( 'bob', 'Bobby the Baker', 'bob' );
+		$check = new AdminUsername( static fn () => array( $bob ), static fn () => null );
+		$res   = $check->run();
+
+		$this->assertSame( 'info', $res->severity() );
+		$this->assertStringContainsString( 'author archive address', implode( ' ', $res->details() ) );
+		$this->assertStringContainsString( 'user slug', $res->fix_hint() );
+	}
+
+	/**
+	 * The display name is compared without regard to case.
+	 */
+	public function test_display_name_match_ignores_case(): void {
+		$bob   = $this->user( 'bob', 'BOB', 'someone-else' );
+		$check = new AdminUsername( static fn () => array( $bob ), static fn () => null );
+
+		$this->assertSame( 'warning', $check->run()->severity() );
+	}
+
+	/**
+	 * Both exposures: the warning stays and the author address line is added to its details.
+	 */
+	public function test_display_name_and_slug_both_matching_is_warning_with_slug_line(): void {
+		$bob = $this->user( 'bob', 'Bob', 'bob' );
+		$res = ( new AdminUsername( static fn () => array( $bob ), static fn () => null ) )->run();
+
+		$this->assertSame( 'warning', $res->severity() );
+		$this->assertStringContainsString( 'author archive address', implode( ' ', $res->details() ) );
+	}
+
+	/**
+	 * Details name logins, so exports hide them.
+	 */
+	public function test_is_sensitive(): void {
+		$this->assertTrue( ( new AdminUsername() )->is_sensitive() );
+	}
+
+	/**
 	 * Unique logins are ok.
 	 */
 	public function test_clean_admins_are_ok(): void {

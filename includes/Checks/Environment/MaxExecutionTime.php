@@ -11,6 +11,7 @@ namespace StoreAudit\Checks\Environment;
 
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
+use StoreAudit\EnvSnapshot;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
 
@@ -82,14 +83,13 @@ final class MaxExecutionTime extends AbstractCheck {
 	}
 
 	/**
-	 * Read the live site.
+	 * Read the value the site had when the plugin loaded, before the audit raised the time limit for its own work.
 	 *
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		$value = ini_get( 'max_execution_time' );
 		return array(
-			'seconds' => (int) $value,
+			'seconds' => EnvSnapshot::get()['max_execution_time'],
 			'cli'     => 'cli' === PHP_SAPI,
 		);
 	}

@@ -36,7 +36,7 @@ final class DashboardWidget {
 	 * Add the widget for shop managers and admins only.
 	 */
 	public function add_widget(): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$callback = array( $this, 'render' );
@@ -49,12 +49,13 @@ final class DashboardWidget {
 	 * @param string $hook Current admin page hook.
 	 */
 	public function enqueue( string $hook ): void {
-		if ( 'index.php' !== $hook || ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( 'index.php' !== $hook || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$css = '#' . self::WIDGET_ID . ' .sa-widget-score{display:flex;align-items:baseline;gap:8px;margin:0 0 4px}'
 			. '#' . self::WIDGET_ID . ' .sa-widget-number{font-size:44px;font-weight:700;line-height:1}'
 			. '#' . self::WIDGET_ID . ' .is-good{color:#1e7e34}#' . self::WIDGET_ID . ' .is-fair{color:#b26200}#' . self::WIDGET_ID . ' .is-poor{color:#b32d2e}'
+			. '#' . self::WIDGET_ID . ' .sa-widget-note{color:#b26200;font-weight:600;margin:0 0 4px}'
 			. '#' . self::WIDGET_ID . ' .sa-widget-date{color:#50575e;margin:0 0 12px}'
 			. '#' . self::WIDGET_ID . ' .sa-widget-list{margin:0 0 12px;padding:0;list-style:none}'
 			. '#' . self::WIDGET_ID . ' .sa-widget-list li{margin:0 0 8px;padding-left:10px;border-left:4px solid #8c8f94}'
@@ -89,7 +90,7 @@ final class DashboardWidget {
 	 * Widget body.
 	 */
 	public function render(): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$page   = admin_url( 'admin.php?page=' . Page::SLUG );
@@ -101,11 +102,16 @@ final class DashboardWidget {
 			return;
 		}
 
-		$score = Arr::get_int( Arr::get_map( $report, 'score' ), 'overall' );
-		$top   = self::top_problems( Arr::get_array( $report, 'results' ) );
+		$score_data = Arr::get_map( $report, 'score' );
+		$score      = Arr::get_int( $score_data, 'overall' );
+		$note       = Report::incomplete_note( $score_data );
+		$top        = self::top_problems( Arr::get_array( $report, 'results' ) );
 
 		echo '<div class="sa-widget-score"><span class="sa-widget-number ' . esc_attr( Exports::score_class( $score ) ) . '">' . esc_html( (string) $score ) . '</span>';
 		echo '<span>' . esc_html__( 'out of 100', 'store-audit-for-woocommerce' ) . '</span></div>';
+		if ( '' !== $note ) {
+			echo '<p class="sa-widget-note">' . esc_html( $note ) . '</p>';
+		}
 		echo '<p class="sa-widget-date">' . esc_html(
 			sprintf(
 				/* translators: %s: date and time of the last audit. */

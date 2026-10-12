@@ -55,6 +55,10 @@ wp store-audit run --format=markdown
 
 Add your own checks with the `store_audit_checks` filter. A check is a class implementing `StoreAudit\Checks\CheckInterface`.
 
+Put the class in its own file, and load that file inside the filter callback. The callback only runs when Store Audit is active, so your plugin never breaks when Store Audit is switched off or removed (a class that extends `AbstractCheck` cannot be declared without it).
+
+`class-my-min-order-check.php`:
+
 ```php
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
@@ -82,17 +86,22 @@ final class My_Min_Order_Check extends AbstractCheck {
 			: Result::warning( 'No minimum order amount is set.' );
 	}
 }
+```
 
+Your plugin's main file:
+
+```php
 add_filter(
 	'store_audit_checks',
 	static function ( array $checks ): array {
+		require_once __DIR__ . '/class-my-min-order-check.php';
 		$checks[] = new My_Min_Order_Check();
 		return $checks;
 	}
 );
 ```
 
-Checks must be read-only. Ids are unique snake_case strings prefixed by the section.
+Checks must be read-only. An id must match `^[a-z0-9_]+$` (lower-case letters, digits and underscores), must be unique, and should start with the section id. The section must be one of `environment`, `plugins`, `woocommerce`, `security` or `performance` (the `Section` constants). A check with another id or section, or with an id that is already taken, is left out and reported with `_doing_it_wrong()` when `WP_DEBUG` is on.
 
 ## Development
 

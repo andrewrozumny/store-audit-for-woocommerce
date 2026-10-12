@@ -118,4 +118,24 @@ final class MaxExecutionTimeTest extends TestCase {
 		$this->assertNotSame( '', $check->fix_hint() );
 		$this->assertDoesNotMatchRegularExpression( '/[\x{2013}\x{2014}]/u', $check->explanation() . $check->fix_hint() . $check->title() );
 	}
+
+	/**
+	 * Tear down the snapshot so other tests start clean.
+	 */
+	protected function tear_down(): void {
+		\StoreAudit\EnvSnapshot::reset();
+		parent::tear_down();
+	}
+
+	/**
+	 * The check reports the limit the site had at load time (the snapshot), not whatever the live value is now.
+	 */
+	public function test_reads_the_snapshot_not_the_live_value(): void {
+		\StoreAudit\EnvSnapshot::set( '256M', 17 );
+
+		$result = ( new MaxExecutionTime() )->run();
+
+		$this->assertSame( 'warning', $result->severity() );
+		$this->assertStringContainsString( '17 seconds', $result->summary() );
+	}
 }

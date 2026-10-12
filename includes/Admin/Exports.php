@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Two admin-post endpoints that read the last stored report. Both need a nonce and manage_woocommerce.
+ * Two admin-post endpoints that read the last stored report. Both need a nonce and manage_options.
  */
 final class Exports {
 
@@ -47,7 +47,7 @@ final class Exports {
 	 * Capability and nonce gate. Ends the request when it fails.
 	 */
 	public function authorize(): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You are not allowed to export the audit report.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
 		if ( ! Nonce::is_plain( '_wpnonce' ) || false === check_admin_referer( self::NONCE_ACTION ) ) {
@@ -172,11 +172,13 @@ final class Exports {
 	 * @param array<string,mixed> $report Report.
 	 */
 	public static function print_body( array $report ): void {
+		$report   = Report::redact_for_export( $report );
 		$labels   = Section::labels();
 		$score    = Arr::get_map( $report, 'score' );
 		$sections = Arr::get_map( $score, 'sections' );
 		$overall  = Arr::get_int( $score, 'overall' );
 		$when     = Report::local_date( Arr::get_string( $report, 'generated_at' ) );
+		$note     = Report::incomplete_note( $score );
 
 		?>
 <header class="sap-header">
@@ -187,6 +189,9 @@ final class Exports {
 	<div class="sap-score <?php echo esc_attr( self::score_class( $overall ) ); ?>">
 		<span class="sap-score-number"><?php echo esc_html( (string) $overall ); ?></span>
 		<span class="sap-score-label"><?php echo esc_html__( 'out of 100', 'store-audit-for-woocommerce' ); ?></span>
+		<?php if ( '' !== $note ) : ?>
+		<span class="sap-score-note"><?php echo esc_html( $note ); ?></span>
+		<?php endif; ?>
 	</div>
 	<button type="button" class="sap-button" id="store-audit-print-button"><?php echo esc_html__( 'Print / Save as PDF', 'store-audit-for-woocommerce' ); ?></button>
 </header>
@@ -210,7 +215,7 @@ final class Exports {
 			?>
 		<tr>
 			<td><?php echo esc_html( Arr::get_string( $data, 'label', $labels[ $id ] ?? $id ) ); ?></td>
-			<td><strong><?php echo esc_html( (string) Arr::get_int( $data, 'score' ) ); ?></strong></td>
+			<td><strong><?php echo esc_html( isset( $data['score'] ) ? (string) Arr::get_int( $data, 'score' ) : __( 'incomplete', 'store-audit-for-woocommerce' ) ); ?></strong></td>
 			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::CRITICAL ) ); ?></td>
 			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::WARNING ) ); ?></td>
 			<td><?php echo esc_html( (string) Arr::get_int( $counts, Result::INFO ) ); ?></td>
@@ -266,16 +271,18 @@ final class Exports {
 
 <footer class="sap-footer">
 		<?php
-		echo wp_kses(
-			Report::attribution_html(),
-			array(
-				'a' => array(
-					'href'   => true,
-					'target' => true,
-					'rel'    => true,
-				),
-			)
-		);
+		if ( Report::show_attribution() ) {
+			echo wp_kses(
+				Report::attribution_html(),
+				array(
+					'a' => array(
+						'href'   => true,
+						'target' => true,
+						'rel'    => true,
+					),
+				)
+			);
+		}
 		?>
 							</footer>
 		<?php

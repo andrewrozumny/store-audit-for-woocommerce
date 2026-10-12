@@ -26,6 +26,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class NegativeStock extends AbstractCheck {
 
 	/**
+	 * SQL that leaves out products allowed to go below zero, for the product lookup table: backorders on the product itself,
+	 * or a variation that inherits ("parent") from a product with backorders on.
+	 */
+	private const NO_BACKORDERS_LOOKUP = " AND NOT EXISTS ( SELECT 1 FROM %i bo WHERE bo.post_id = s.product_id AND bo.meta_key = '_backorders' AND bo.meta_value IN ('yes','notify') )"
+		. " AND NOT EXISTS ( SELECT 1 FROM %i vp JOIN %i bp ON bp.post_id = vp.post_parent AND bp.meta_key = '_backorders' AND bp.meta_value IN ('yes','notify')"
+		. " JOIN %i bv ON bv.post_id = vp.ID AND bv.meta_key = '_backorders' AND bv.meta_value = 'parent' WHERE vp.ID = s.product_id )";
+
+	/**
+	 * The same for the postmeta fallback.
+	 */
+	private const NO_BACKORDERS_META = " AND NOT EXISTS ( SELECT 1 FROM %i bo WHERE bo.post_id = s.post_id AND bo.meta_key = '_backorders' AND bo.meta_value IN ('yes','notify') )"
+		. " AND NOT EXISTS ( SELECT 1 FROM %i vp JOIN %i bp ON bp.post_id = vp.post_parent AND bp.meta_key = '_backorders' AND bp.meta_value IN ('yes','notify')"
+		. " JOIN %i bv ON bv.post_id = vp.ID AND bv.meta_key = '_backorders' AND bv.meta_value = 'parent' WHERE vp.ID = s.post_id )";
+
+	/**
 	 * Returns array{managing:bool,count:int,names:list<string>}.
 	 *
 	 * @var callable
@@ -112,7 +127,7 @@ final class NegativeStock extends AbstractCheck {
 
 	/**
 	 * Read negative-stock products. Uses the indexed product lookup table when it exists
-	 * (one COUNT plus a LIMIT 20 sample), else a postmeta query on meta_key _stock (indexed by meta_key).
+	 * (one COUNT plus a LIMIT 20 sample, both without products that take backorders), else a postmeta query on meta_key _stock (indexed by meta_key).
 	 *
 	 * @return array{managing:bool,count:int,names:list<string>}
 	 */
@@ -131,13 +146,17 @@ final class NegativeStock extends AbstractCheck {
 		$lookup     = $db->prefix . 'wc_product_meta_lookup';
 		$has_lookup = Db::table_exists( $lookup );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Read-only audit counts on indexed columns; there is no WooCommerce API for them.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- Read-only audit counts on indexed columns; there is no WooCommerce API for them. The fragments are constants, every value goes through prepare().
 		if ( $has_lookup ) {
-			$count = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i WHERE stock_quantity < 0', $lookup ) ) );
-			$ids   = $db->get_col( $db->prepare( 'SELECT product_id FROM %i WHERE stock_quantity < 0 ORDER BY product_id LIMIT 20', $lookup ) );
+			$from  = 'FROM %i s WHERE s.stock_quantity < 0' . self::NO_BACKORDERS_LOOKUP;
+			$args  = array( $lookup, $db->postmeta, $db->posts, $db->postmeta, $db->postmeta );
+			$count = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) ' . $from, $args ) ) );
+			$ids   = $db->get_col( $db->prepare( 'SELECT s.product_id ' . $from . ' ORDER BY s.product_id LIMIT 20', $args ) );
 		} else {
-			$count = Arr::to_int( $db->get_var( $db->prepare( "SELECT COUNT(*) FROM %i WHERE meta_key = '_stock' AND CAST(meta_value AS SIGNED) < 0", $db->postmeta ) ) );
-			$ids   = $db->get_col( $db->prepare( "SELECT post_id FROM %i WHERE meta_key = '_stock' AND CAST(meta_value AS SIGNED) < 0 ORDER BY post_id LIMIT 20", $db->postmeta ) );
+			$from  = "FROM %i s WHERE s.meta_key = '_stock' AND CAST(s.meta_value AS SIGNED) < 0" . self::NO_BACKORDERS_META;
+			$args  = array( $db->postmeta, $db->postmeta, $db->posts, $db->postmeta, $db->postmeta );
+			$count = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) ' . $from, $args ) ) );
+			$ids   = $db->get_col( $db->prepare( 'SELECT s.post_id ' . $from . ' ORDER BY s.post_id LIMIT 20', $args ) );
 		}
 		// phpcs:enable
 

@@ -126,8 +126,9 @@ final class CatalogSize extends AbstractCheck {
 		);
 
 		if ( $variations > 10000 && ! Arr::get_bool( $d, 'ext' ) ) {
-			return Result::warning( $summary . ' ' . __( 'A catalog this size runs slowly without a persistent object cache.', 'store-audit-for-woocommerce' ) );
+			// The missing cache is penalised once, by the Object cache check in Environment.
+			return Result::info( $summary . ' ' . __( 'A catalog this size runs slowly without a persistent object cache, see Persistent object cache in Environment.', 'store-audit-for-woocommerce' ) );
 		}
-		return Result::info( $summary );
+		return Result::ok( $summary );
 	}
 }

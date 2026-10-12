@@ -38,12 +38,41 @@ final class ApiKeysTest extends TestCase {
 	}
 
 	/**
-	 * Read only never used.
+	 * A read key that was never used is a warning that says what a read key gives away.
 	 */
-	public function test_read_only_key_is_ignored(): void {
+	public function test_never_used_read_key_warns_and_explains(): void {
 		$check = new ApiKeys( fn(): array => array( $this->key( 'read', null ) ), self::NOW );
 
+		$result = $check->run();
+
+		$this->assertSame( 'warning', $result->severity() );
+		$this->assertStringContainsString( 'never used', $result->details()[0] );
+		$this->assertStringContainsString( 'orders and customer data', implode( ' ', $result->details() ) );
+	}
+
+	/**
+	 * A read key used last month is fine.
+	 */
+	public function test_recent_read_key_is_ok(): void {
+		$check = new ApiKeys( fn(): array => array( $this->key( 'read', '2026-09-20 10:00:00' ) ), self::NOW );
+
 		$this->assertSame( 'ok', $check->run()->severity() );
+	}
+
+	/**
+	 * A read key idle for over a year warns.
+	 */
+	public function test_old_read_key_warns(): void {
+		$check = new ApiKeys( fn(): array => array( $this->key( 'read', '2024-01-10 10:00:00' ) ), self::NOW );
+
+		$this->assertSame( 'warning', $check->run()->severity() );
+	}
+
+	/**
+	 * Key names and users stay out of exports.
+	 */
+	public function test_is_sensitive(): void {
+		$this->assertTrue( ( new ApiKeys( fn(): array => array() ) )->is_sensitive() );
 	}
 
 	/**

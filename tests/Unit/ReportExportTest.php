@@ -197,4 +197,96 @@ final class ReportExportTest extends TestCase {
 		$this->assertStringNotContainsString( "\r", $markdown );
 		$this->assertStringContainsString( 'alert(1)', $markdown, 'the text itself must still be readable' );
 	}
+
+	/**
+	 * Report with one sensitive row (account names in its details) and one plain row.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function sensitive_report(): array {
+		$report              = $this->report();
+		$report['results'][] = array(
+			'id'          => 'security_admin_count',
+			'section'     => 'security',
+			'title'       => 'Administrator accounts',
+			'severity'    => 'warning',
+			'summary'     => '4 administrator accounts, more than the 3 a typical store needs.',
+			'details'     => array( 'jdoe (email at example.com)', 'shopowner (email at example.com)' ),
+			'explanation' => '',
+			'fix_hint'    => '',
+			'duration_ms' => 1,
+			'sensitive'   => true,
+		);
+		return $report;
+	}
+
+	/**
+	 * Markdown and JSON exports replace the details of sensitive checks with a count.
+	 */
+	public function test_exports_redact_sensitive_details(): void {
+		$report = $this->sensitive_report();
+		$md     = Report::to_markdown( $report );
+		$json   = Report::to_json( $report );
+
+		foreach ( array( $md, $json ) as $text ) {
+			$this->assertStringNotContainsString( 'jdoe', $text );
+			$this->assertStringNotContainsString( 'shopowner', $text );
+			$this->assertStringContainsString( '2 items. Details are shown only on the Store Audit screen in wp-admin.', $text );
+			$this->assertStringContainsString( '4 administrator accounts', $text, 'the summary stays' );
+			$this->assertStringContainsString( 'detail one', $text, 'plain checks keep their details' );
+		}
+	}
+
+	/**
+	 * The command line asks for the full data.
+	 */
+	public function test_full_data_is_available_without_redaction(): void {
+		$report = $this->sensitive_report();
+
+		$this->assertStringContainsString( 'jdoe', Report::to_markdown( $report, false ) );
+		$this->assertStringContainsString( 'jdoe', Report::to_json( $report, false ) );
+	}
+
+	/**
+	 * The stored report keeps the flag and the full details; only the export copy is redacted.
+	 */
+	public function test_redaction_does_not_touch_the_stored_report(): void {
+		$report   = $this->sensitive_report();
+		$redacted = Report::redact_for_export( $report );
+
+		$this->assertSame( $report, $this->sensitive_report() );
+		$this->assertTrue( $redacted['results'][8]['sensitive'] );
+		$this->assertCount( 1, $redacted['results'][8]['details'] );
+	}
+
+	/**
+	 * An incomplete score is marked in the Markdown, and a section without a score says so.
+	 */
+	public function test_markdown_marks_incomplete_scores(): void {
+		$report                        = $this->report();
+		$report['score']['incomplete'] = true;
+		$report['score']['checked']    = 10;
+		$report['score']['total']      = 18;
+		$report['score']['sections']['performance']['score'] = null;
+
+		$md = Report::to_markdown( $report );
+
+		$this->assertStringContainsString( '**61 / 100** (Incomplete: 10 of 18 checks ran)', $md );
+		$this->assertStringContainsString( '| Performance | incomplete |', $md );
+		$this->assertStringContainsString( '## Performance (incomplete)', $md );
+	}
+
+	/**
+	 * The filter removes the attribution from exports only.
+	 */
+	public function test_attribution_filter_switches_exports_off(): void {
+		\Brain\Monkey\Filters\expectApplied( 'store_audit_show_attribution' )->andReturn( false );
+
+		$md   = Report::to_markdown( $this->report() );
+		$json = Report::to_json( $this->report() );
+
+		$this->assertStringNotContainsString( 'helpmybiz.org', $md );
+		$this->assertStringNotContainsString( 'generated_by', $json );
+		$this->assertStringContainsString( 'helpmybiz.org', Report::attribution_html(), 'the admin screen builds it regardless' );
+	}
 }

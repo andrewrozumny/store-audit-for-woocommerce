@@ -19,6 +19,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 abstract class AbstractCheck implements CheckInterface {
 
 	/**
+	 * Whether the details of this check name accounts, files or keys that must not leave the site in an export
+	 * (printed report, Markdown, JSON). The full details stay on the Store Audit screen and in WP-CLI.
+	 */
+	public function is_sensitive(): bool {
+		return false;
+	}
+
+	/**
 	 * Human readable byte size.
 	 *
 	 * @param int $bytes Bytes.

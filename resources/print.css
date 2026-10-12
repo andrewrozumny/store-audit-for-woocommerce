@@ -8,6 +8,7 @@ body.store-audit-print { margin: 0; background: #f0f0f1; color: #1d2327; font: 1
 .sap-score { text-align: center; }
 .sap-score-number { display: block; font-size: 56px; font-weight: 700; line-height: 1; }
 .sap-score-label { color: #50575e; }
+.sap-score-note { display: block; margin-top: 4px; color: #b26200; font-size: 12px; }
 .sap-score.is-good .sap-score-number { color: #1e7e34; }
 .sap-score.is-fair .sap-score-number { color: #b26200; }
 .sap-score.is-poor .sap-score-number { color: #b32d2e; }

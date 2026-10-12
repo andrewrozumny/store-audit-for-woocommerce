@@ -104,7 +104,9 @@ final class SelfProbe {
 	}
 
 	/**
-	 * Resolve a path or URL into a URL of this site, or null when it is foreign.
+	 * Resolve a path or URL into a URL of this site, or null when it is foreign. A full URL counts as this site only
+	 * when scheme, host and port all match the home address or the site address, so another port or the other
+	 * scheme of the same host is never requested.
 	 *
 	 * @param string $target Path or URL.
 	 */
@@ -116,18 +118,50 @@ final class SelfProbe {
 			return site_url( $target );
 		}
 
-		$host   = wp_parse_url( $target, PHP_URL_HOST );
-		$scheme = wp_parse_url( $target, PHP_URL_SCHEME );
-		if ( ! is_string( $host ) || ! is_string( $scheme ) || ! in_array( strtolower( $scheme ), array( 'http', 'https' ), true ) ) {
+		$origin = self::origin( $target );
+		if ( null === $origin ) {
 			return null;
 		}
 		foreach ( array( home_url(), site_url() ) as $own ) {
-			$own_host = wp_parse_url( $own, PHP_URL_HOST );
-			if ( is_string( $own_host ) && strtolower( $own_host ) === strtolower( $host ) ) {
+			if ( self::origin( $own ) === $origin ) {
 				return $target;
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Host of a well-formed http(s) address that is not an address of this site, or null for anything else.
+	 *
+	 * @param string $target Path or URL.
+	 */
+	private function foreign_host_of( string $target ): ?string {
+		if ( '' === $target || 1 === preg_match( '/[\x00-\x20\x7f]/', $target ) || null !== $this->resolve( $target ) ) {
+			return null;
+		}
+		$origin = self::origin( $target );
+		return null === $origin ? null : $origin['host'];
+	}
+
+	/**
+	 * Scheme, lower-case host and port (the default port of the scheme when none is written) of an http(s) URL.
+	 *
+	 * @param string $url URL.
+	 * @return array{scheme:string,host:string,port:int}|null
+	 */
+	private static function origin( string $url ): ?array {
+		$host   = wp_parse_url( $url, PHP_URL_HOST );
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$port   = wp_parse_url( $url, PHP_URL_PORT );
+		if ( ! is_string( $host ) || '' === $host || ! is_string( $scheme ) || ! in_array( strtolower( $scheme ), array( 'http', 'https' ), true ) ) {
+			return null;
+		}
+		$scheme = strtolower( $scheme );
+		return array(
+			'scheme' => $scheme,
+			'host'   => strtolower( $host ),
+			'port'   => is_int( $port ) ? $port : ( 'https' === $scheme ? 443 : 80 ),
+		);
 	}
 
 	/**
@@ -141,7 +175,10 @@ final class SelfProbe {
 	private function request( string $method, string $target, array $extra, int $timeout ): ProbeResponse {
 		$url = $this->resolve( $target );
 		if ( null === $url ) {
-			return ProbeResponse::failure( 'Refused: not an address of this site.' );
+			$foreign = $this->foreign_host_of( $target );
+			return null !== $foreign
+				? ProbeResponse::foreign_host( $foreign )
+				: ProbeResponse::failure( __( 'Refused: not an address of this site.', 'store-audit-for-woocommerce' ) );
 		}
 
 		$version = defined( 'STORE_AUDIT_VERSION' ) ? STORE_AUDIT_VERSION : '0';
@@ -160,13 +197,13 @@ final class SelfProbe {
 			return ProbeResponse::failure( $raw->get_error_message() );
 		}
 		if ( ! is_array( $raw ) ) {
-			return ProbeResponse::failure( 'Unexpected answer.' );
+			return ProbeResponse::failure( __( 'Unexpected answer.', 'store-audit-for-woocommerce' ) );
 		}
 
 		$response = $raw['response'] ?? array();
 		$status   = is_array( $response ) ? Arr::get_int( $response, 'code' ) : 0;
 		if ( $status < 100 ) {
-			return ProbeResponse::failure( 'No HTTP status.' );
+			return ProbeResponse::failure( __( 'No HTTP status.', 'store-audit-for-woocommerce' ) );
 		}
 
 		$headers = array();

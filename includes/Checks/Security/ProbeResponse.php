@@ -26,13 +26,15 @@ final class ProbeResponse {
 	 * @param array<string,string> $headers   Response headers, lower-case names.
 	 * @param string               $body      Body snippet (limited).
 	 * @param string               $error     Failure reason when unreachable.
+	 * @param string               $foreign   Host of the address when it is served from another host, so it was not requested.
 	 */
 	public function __construct(
 		private readonly bool $reachable,
 		private readonly int $status = 0,
 		private readonly array $headers = array(),
 		private readonly string $body = '',
-		private readonly string $error = ''
+		private readonly string $error = '',
+		private readonly string $foreign = ''
 	) {
 	}
 
@@ -43,6 +45,30 @@ final class ProbeResponse {
 	 */
 	public static function failure( string $error ): self {
 		return new self( false, 0, array(), '', $error );
+	}
+
+	/**
+	 * A probe that was not sent because the address is served from another host (for example a CDN).
+	 *
+	 * @param string $host Host of the address.
+	 */
+	public static function foreign_host( string $host ): self {
+		return new self(
+			false,
+			0,
+			array(),
+			'',
+			/* translators: %s: host name. */
+			sprintf( __( 'Not requested: the address is on another host (%s).', 'store-audit-for-woocommerce' ), $host ),
+			$host
+		);
+	}
+
+	/**
+	 * Host of the address when it is served from another host and was not requested, otherwise an empty string.
+	 */
+	public function foreign(): string {
+		return $this->foreign;
 	}
 
 	/**

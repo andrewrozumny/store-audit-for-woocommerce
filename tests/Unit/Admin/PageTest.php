@@ -87,4 +87,33 @@ final class PageTest extends TestCase {
 		$this->assertIsArray( $config['lastReport'] );
 		$this->assertSame( '</script><script>alert(1)</script><!-- &amp; \'q\'', $config['lastReport']['results'][0]['summary'] );
 	}
+
+	/**
+	 * The menu item stays under WooCommerce but needs manage_options.
+	 */
+	public function test_menu_needs_manage_options(): void {
+		$args = array();
+		Functions\when( 'add_submenu_page' )->alias(
+			static function ( ...$call ) use ( &$args ): string {
+				$args = $call;
+				return 'woocommerce_page_store-audit';
+			}
+		);
+
+		( new Page() )->add_menu();
+
+		$this->assertSame( 'woocommerce', $args[0] );
+		$this->assertSame( 'manage_options', $args[3] );
+	}
+
+	/**
+	 * A shop manager who opens the address by hand gets 403.
+	 */
+	public function test_page_refuses_shop_manager(): void {
+		Functions\when( 'current_user_can' )->alias( static fn( string $cap ): bool => 'manage_options' !== $cap );
+		Functions\expect( 'wp_die' )->once()->with( \Mockery::type( 'string' ), '', array( 'response' => 403 ) )->andThrow( new \RuntimeException( 'died' ) );
+
+		$this->expectException( \RuntimeException::class );
+		( new Page() )->render();
+	}
 }

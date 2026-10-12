@@ -121,18 +121,24 @@ final class StoredReportTest extends TestCase {
 			'wp_version'     => '7.1',
 			'wc_version'     => '11.2',
 			'score'          => array(
-				'overall'  => 61,
-				'sections' => array(
+				'overall'    => 40,
+				'checked'    => 1,
+				'total'      => 1,
+				'incomplete' => false,
+				'sections'   => array(
 					'security' => array(
-						'label'  => 'Security',
-						'score'  => 55,
-						'counts' => array(
+						'label'      => 'Security',
+						'score'      => 40,
+						'counts'     => array(
 							'critical' => 1,
 							'warning'  => 0,
 							'info'     => 0,
 							'ok'       => 0,
 							'error'    => 0,
 						),
+						'checked'    => 1,
+						'total'      => 1,
+						'incomplete' => false,
 					),
 				),
 			),
@@ -147,6 +153,7 @@ final class StoredReportTest extends TestCase {
 					'explanation' => 'Why',
 					'fix_hint'    => 'Fix',
 					'duration_ms' => 4,
+					'sensitive'   => false,
 				),
 			),
 		);
@@ -181,5 +188,70 @@ final class StoredReportTest extends TestCase {
 		$score = $report['score'];
 		$this->assertIsArray( $score );
 		$this->assertSame( 90, $score['overall'] );
+	}
+
+	/**
+	 * The sensitive flag survives normalising; a missing flag means not sensitive.
+	 */
+	public function test_sensitive_flag_is_kept(): void {
+		$this->options[ Report::OPTION ] = array(
+			'results' => array(
+				array(
+					'id'        => 'a',
+					'section'   => 'security',
+					'title'     => 'A',
+					'severity'  => Result::WARNING,
+					'sensitive' => true,
+				),
+				array(
+					'id'       => 'b',
+					'section'  => 'security',
+					'title'    => 'B',
+					'severity' => Result::OK,
+				),
+			),
+		);
+
+		$report = Report::get_last();
+
+		$this->assertNotNull( $report );
+		$this->assertTrue( $report['results'][0]['sensitive'] );
+		$this->assertFalse( $report['results'][1]['sensitive'] );
+	}
+
+	/**
+	 * A score saved by an older version has no checked/total/incomplete fields and is worked out again.
+	 */
+	public function test_score_from_an_older_version_is_recomputed(): void {
+		$this->options[ Report::OPTION ] = array(
+			'score'   => array(
+				'overall'  => 100,
+				'sections' => array(
+					'security' => array(
+						'label'  => 'Security',
+						'score'  => 100,
+						'counts' => array( 'critical' => 1 ),
+					),
+				),
+			),
+			'results' => array(
+				array(
+					'id'       => 'a',
+					'section'  => 'security',
+					'title'    => 'A',
+					'severity' => Result::CRITICAL,
+					'summary'  => 'Public wp-config',
+				),
+			),
+		);
+
+		$report = Report::get_last();
+
+		$this->assertNotNull( $report );
+		$score = $report['score'];
+		$this->assertIsArray( $score );
+		$this->assertSame( 40, $score['overall'] );
+		$this->assertSame( 1, $score['total'] );
+		$this->assertFalse( $score['incomplete'] );
 	}
 }

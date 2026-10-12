@@ -13,6 +13,7 @@ use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Plugins\DetailList;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\ActivePlugins;
 use StoreAudit\Support\Arr;
 use StoreAudit\Support\Db;
 
@@ -26,7 +27,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Taxes extends AbstractCheck {
 
 	/**
-	 * Returns array{enabled:bool,rates:int}.
+	 * Plugins that calculate tax automatically, by slug.
+	 */
+	private const SERVICES = array(
+		'woocommerce-services'                    => 'WooCommerce Tax',
+		'woocommerce-tax'                         => 'WooCommerce Tax',
+		'taxjar-simplified-taxes-for-woocommerce' => 'TaxJar',
+		'avalara-avatax'                          => 'Avalara AvaTax',
+		'woocommerce-avatax'                      => 'Avalara AvaTax',
+		'stripe-tax-for-woocommerce'              => 'Stripe Tax',
+	);
+
+	/**
+	 * Returns array{enabled:bool,rates:int,auto:string}.
 	 *
 	 * @var callable
 	 */
@@ -66,7 +79,7 @@ final class Taxes extends AbstractCheck {
 	 * Explanation.
 	 */
 	public function explanation(): string {
-		return __( 'If tax calculation is turned on but no rates are defined, every order is charged zero tax. That can mean wrongly priced products and trouble with tax authorities.', 'store-audit-for-woocommerce' );
+		return __( 'If tax calculation is turned on but no rates are defined and no tax service is connected, every order is charged zero tax. That can mean wrongly priced products and trouble with tax authorities.', 'store-audit-for-woocommerce' );
 	}
 
 	/**
@@ -88,7 +101,17 @@ final class Taxes extends AbstractCheck {
 		}
 
 		if ( 0 === $rates ) {
-			return Result::warning( __( 'Tax calculation is on, but no tax rates are defined, so no tax is added to orders.', 'store-audit-for-woocommerce' ) );
+			$auto = Arr::get_string( $data, 'auto' );
+			if ( '' !== $auto ) {
+				return Result::ok(
+					__( 'Tax calculation is on and an automatic tax service works out the tax.', 'store-audit-for-woocommerce' ),
+					array(
+						/* translators: %s: name of the tax service. */
+						sprintf( __( 'Taxes are calculated automatically by %s.', 'store-audit-for-woocommerce' ), $auto ),
+					)
+				);
+			}
+			return Result::info( __( 'No manual tax rates are set. If an automatic tax service calculates your tax, this is fine; otherwise no tax is added.', 'store-audit-for-woocommerce' ) );
 		}
 
 		return Result::ok(
@@ -103,20 +126,38 @@ final class Taxes extends AbstractCheck {
 	/**
 	 * Read tax state. The rates table is small and COUNT(*) is cheap.
 	 *
-	 * @return array{enabled:bool,rates:int}
+	 * @return array{enabled:bool,rates:int,auto:string}
 	 */
 	private function read_taxes(): array {
 		$enabled = function_exists( 'wc_tax_enabled' ) && wc_tax_enabled();
 		$rates   = 0;
+		$auto    = '';
 		if ( $enabled ) {
 			$db = Db::wpdb();
 			Db::require_table( $db->prefix . 'woocommerce_tax_rates' );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Cheap COUNT on a small table; there is no WooCommerce API for a bare count.
 			$rates = Arr::to_int( $db->get_var( $db->prepare( 'SELECT COUNT(*) FROM %i', $db->prefix . 'woocommerce_tax_rates' ) ) );
+			$auto  = 0 === $rates ? $this->automatic_service() : '';
 		}
 		return array(
 			'enabled' => $enabled,
 			'rates'   => $rates,
+			'auto'    => $auto,
 		);
+	}
+
+	/**
+	 * Name of the automatic tax service in use, or an empty string.
+	 */
+	private function automatic_service(): string {
+		if ( 'yes' === get_option( 'wc_connect_taxes_enabled', 'no' ) ) {
+			return 'WooCommerce Tax';
+		}
+		foreach ( ActivePlugins::slugs() as $slug ) {
+			if ( isset( self::SERVICES[ $slug ] ) ) {
+				return self::SERVICES[ $slug ];
+			}
+		}
+		return '';
 	}
 }

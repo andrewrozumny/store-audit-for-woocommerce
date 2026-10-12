@@ -48,7 +48,7 @@ final class Page {
 			'woocommerce',
 			__( 'Store Audit', 'store-audit-for-woocommerce' ),
 			__( 'Store Audit', 'store-audit-for-woocommerce' ),
-			'manage_woocommerce',
+			'manage_options',
 			self::SLUG,
 			array( $this, 'render' )
 		);
@@ -96,36 +96,39 @@ final class Page {
 	 */
 	private function strings(): array {
 		return array(
-			'running'         => __( 'Running...', 'store-audit-for-woocommerce' ),
-			'copied'          => __( 'Report copied to the clipboard.', 'store-audit-for-woocommerce' ),
-			'copyFailed'      => __( 'Copying was blocked by the browser. The report is selected below, press Ctrl+C (Cmd+C on Mac) to copy it.', 'store-audit-for-woocommerce' ),
-			'copyError'       => __( 'The report could not be loaded. Run the audit again.', 'store-audit-for-woocommerce' ),
-			'summaryCritical' => __( 'Critical', 'store-audit-for-woocommerce' ),
-			'summaryWarnings' => __( 'Warnings', 'store-audit-for-woocommerce' ),
-			'summaryInfo'     => __( 'Info', 'store-audit-for-woocommerce' ),
-			'summaryPassed'   => __( 'Passed', 'store-audit-for-woocommerce' ),
-			'summaryError'    => __( 'Not checked', 'store-audit-for-woocommerce' ),
+			'running'           => __( 'Running...', 'store-audit-for-woocommerce' ),
+			'copied'            => __( 'Report copied to the clipboard.', 'store-audit-for-woocommerce' ),
+			'copyFailed'        => __( 'Copying was blocked by the browser. The report is selected below, press Ctrl+C (Cmd+C on Mac) to copy it.', 'store-audit-for-woocommerce' ),
+			'copyError'         => __( 'The report could not be loaded. Run the audit again.', 'store-audit-for-woocommerce' ),
+			'summaryCritical'   => __( 'Critical', 'store-audit-for-woocommerce' ),
+			'summaryWarnings'   => __( 'Warnings', 'store-audit-for-woocommerce' ),
+			'summaryInfo'       => __( 'Info', 'store-audit-for-woocommerce' ),
+			'summaryPassed'     => __( 'Passed', 'store-audit-for-woocommerce' ),
+			'summaryError'      => __( 'Not checked', 'store-audit-for-woocommerce' ),
 			/* translators: %d: number of passed checks in a section. */
-			'passedChecks'    => __( 'Passed checks (%d)', 'store-audit-for-woocommerce' ),
-			'run'             => __( 'Run audit', 'store-audit-for-woocommerce' ),
-			'runAgain'        => __( 'Run again', 'store-audit-for-woocommerce' ),
-			'lastRun'         => __( 'Last run:', 'store-audit-for-woocommerce' ),
+			'passedChecks'      => __( 'Passed checks (%d)', 'store-audit-for-woocommerce' ),
+			'run'               => __( 'Run audit', 'store-audit-for-woocommerce' ),
+			'runAgain'          => __( 'Run again', 'store-audit-for-woocommerce' ),
+			'lastRun'           => __( 'Last run:', 'store-audit-for-woocommerce' ),
 			/* translators: 1: check title, 2: current number, 3: total number. */
-			'checking'        => __( 'Checking: %1$s (%2$s of %3$s)', 'store-audit-for-woocommerce' ),
-			'finishing'       => __( 'Building the report...', 'store-audit-for-woocommerce' ),
-			'couldNot'        => __( 'Could not check', 'store-audit-for-woocommerce' ),
-			'failedStart'     => __( 'The audit could not be started. Reload the page and try again.', 'store-audit-for-woocommerce' ),
-			'failedEnd'       => __( 'The report could not be built. Please run the audit again.', 'store-audit-for-woocommerce' ),
-			'score'           => __( 'Store health score', 'store-audit-for-woocommerce' ),
-			'outOf'           => __( 'out of 100', 'store-audit-for-woocommerce' ),
-			'whatIsThis'      => __( 'What is this and why it matters', 'store-audit-for-woocommerce' ),
-			'whatToDo'        => __( 'What to do', 'store-audit-for-woocommerce' ),
-			'noResults'       => __( 'No checks are registered yet.', 'store-audit-for-woocommerce' ),
-			'critical'        => __( 'Critical', 'store-audit-for-woocommerce' ),
-			'warning'         => __( 'Warning', 'store-audit-for-woocommerce' ),
-			'info'            => __( 'Info', 'store-audit-for-woocommerce' ),
-			'ok'              => __( 'OK', 'store-audit-for-woocommerce' ),
-			'error'           => __( 'Not checked', 'store-audit-for-woocommerce' ),
+			'checking'          => __( 'Checking: %1$s (%2$s of %3$s)', 'store-audit-for-woocommerce' ),
+			'finishing'         => __( 'Building the report...', 'store-audit-for-woocommerce' ),
+			'couldNot'          => __( 'Could not check', 'store-audit-for-woocommerce' ),
+			'failedStart'       => __( 'The audit could not be started. Reload the page and try again.', 'store-audit-for-woocommerce' ),
+			'failedEnd'         => __( 'The report could not be built. Please run the audit again.', 'store-audit-for-woocommerce' ),
+			'score'             => __( 'Store health score', 'store-audit-for-woocommerce' ),
+			'outOf'             => __( 'out of 100', 'store-audit-for-woocommerce' ),
+			/* translators: 1: number of checks that ran, 2: number of checks in the report. */
+			'incomplete'        => __( 'Incomplete: %1$d of %2$d checks ran', 'store-audit-for-woocommerce' ),
+			'incompleteSection' => __( 'incomplete', 'store-audit-for-woocommerce' ),
+			'whatIsThis'        => __( 'What is this and why it matters', 'store-audit-for-woocommerce' ),
+			'whatToDo'          => __( 'What to do', 'store-audit-for-woocommerce' ),
+			'noResults'         => __( 'No checks are registered yet.', 'store-audit-for-woocommerce' ),
+			'critical'          => __( 'Critical', 'store-audit-for-woocommerce' ),
+			'warning'           => __( 'Warning', 'store-audit-for-woocommerce' ),
+			'info'              => __( 'Info', 'store-audit-for-woocommerce' ),
+			'ok'                => __( 'OK', 'store-audit-for-woocommerce' ),
+			'error'             => __( 'Not checked', 'store-audit-for-woocommerce' ),
 		);
 	}
 
@@ -133,7 +136,7 @@ final class Page {
 	 * Render the page shell. The script fills in the rest.
 	 */
 	public function render(): void {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( esc_html__( 'You do not have permission to view this page.', 'store-audit-for-woocommerce' ), '', array( 'response' => 403 ) );
 		}
 		$has_report = null !== Report::get_last();

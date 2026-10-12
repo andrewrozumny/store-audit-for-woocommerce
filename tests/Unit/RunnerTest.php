@@ -70,7 +70,8 @@ final class RunnerTest extends TestCase {
 		$result = ( new Runner() )->run_one( $check );
 
 		$this->assertSame( 'error', $result['severity'] );
-		$this->assertSame( 'Could not check: boom', $result['summary'] );
+		$this->assertSame( 'Could not check: an internal error occurred (details in the PHP error log when debugging is on).', $result['summary'] );
+		$this->assertStringNotContainsString( 'boom', $result['summary'] );
 		$this->assertSame( 'environment_fake', $result['id'] );
 	}
 
@@ -88,5 +89,46 @@ final class RunnerTest extends TestCase {
 		$result = ( new Runner() )->run_one( $check );
 
 		$this->assertSame( 'error', $result['severity'] );
+	}
+
+	/**
+	 * The raw exception text and any path in it never reach the report.
+	 */
+	public function test_error_summary_has_no_path(): void {
+		$check  = new FakeCheck(
+			'environment_fake',
+			'environment',
+			static function (): Result {
+				throw new \RuntimeException( 'Cannot open /var/www/html/wp-config.php' );
+			}
+		);
+		$result = ( new Runner() )->run_one( $check );
+
+		$this->assertStringNotContainsString( '/var/www', $result['summary'] );
+		$this->assertStringNotContainsString( 'wp-config', $result['summary'] );
+	}
+
+	/**
+	 * Only a limit that is set and shorter than 30 seconds is raised; zero and longer limits are left alone.
+	 */
+	public function test_time_limit_is_only_ever_raised(): void {
+		$this->assertNull( Runner::time_limit_to_set( 0 ), 'unlimited (CLI) must not become 30' );
+		$this->assertNull( Runner::time_limit_to_set( 30 ) );
+		$this->assertNull( Runner::time_limit_to_set( 120 ), 'a longer limit must never be lowered' );
+		$this->assertSame( 30, Runner::time_limit_to_set( 10 ) );
+		$this->assertSame( 30, Runner::time_limit_to_set( 1 ) );
+		$this->assertNull( Runner::time_limit_to_set( -1 ) );
+	}
+
+	/**
+	 * The sensitive flag of a check is stored in the row; checks that do not declare it are not sensitive.
+	 */
+	public function test_sensitive_flag_is_carried(): void {
+		$plain     = ( new Runner() )->run_one( new FakeCheck() );
+		$sensitive = ( new Runner() )->run_one( new SensitiveFakeCheck() );
+
+		$this->assertFalse( $plain['sensitive'] );
+		$this->assertTrue( $sensitive['sensitive'] );
+		$this->assertFalse( ( new Runner() )->not_run( new SensitiveFakeCheck() )['sensitive'] );
 	}
 }

@@ -153,6 +153,6 @@ final class TableSizes extends AbstractCheck {
 				$details
 			);
 		}
-		return Result::info( $summary, $details );
+		return Result::ok( $summary, $details );
 	}
 }

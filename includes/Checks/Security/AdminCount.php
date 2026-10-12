@@ -91,4 +91,11 @@ final class AdminCount extends AbstractSecurityCheck {
 			$this->cap_list( $lines )
 		);
 	}
+
+	/**
+	 * Details name accounts, files or keys, so exports do not carry them.
+	 */
+	public function is_sensitive(): bool {
+		return true;
+	}
 }

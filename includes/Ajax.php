@@ -46,7 +46,7 @@ final class Ajax {
 		if ( ! Nonce::is_plain( 'nonce' ) || false === check_ajax_referer( self::NONCE_ACTION, 'nonce', false ) ) {
 			wp_send_json_error( array( 'message' => __( 'Security check failed. Reload the page and try again.', 'store-audit-for-woocommerce' ) ), 403 );
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to run the audit.', 'store-audit-for-woocommerce' ) ), 403 );
 		}
 

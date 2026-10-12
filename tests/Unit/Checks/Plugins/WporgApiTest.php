@@ -85,6 +85,56 @@ final class WporgApiTest extends TestCase {
 
 		$this->assertSame( 'closed', $info['status'] );
 		$this->assertSame( 'Author Request', $info['reason'] );
+		$this->assertFalse( $info['security'] );
+	}
+
+	/**
+	 * Closed because of a security problem: the reason code is "security-issue".
+	 */
+	public function test_closed_for_security_is_flagged(): void {
+		$api  = $this->api(
+			array(
+				'code' => 404,
+				'body' => '{"error":"closed","name":"Risky Plugin","closed":true,"closed_date":"2024-02-23","reason":"security-issue","reason_text":"Security Issue"}',
+			)
+		);
+		$info = $api->plugin( 'risky-plugin' );
+
+		$this->assertSame( 'closed', $info['status'] );
+		$this->assertTrue( $info['security'] );
+		$this->assertSame( 'Risky Plugin', $info['name'] );
+	}
+
+	/**
+	 * The name the API reports is returned so the caller can tell a different plugin that took the slug.
+	 */
+	public function test_found_returns_the_name(): void {
+		$api = $this->api(
+			array(
+				'code' => 200,
+				'body' => '{"name":"Akismet Anti-spam: Spam Protection","version":"5.7.2"}',
+			)
+		);
+
+		$this->assertSame( 'Akismet Anti-spam: Spam Protection', $api->plugin( 'akismet' )['name'] );
+	}
+
+	/**
+	 * Entries cached before the name existed still come back with the full shape.
+	 */
+	public function test_old_cache_entries_get_defaults(): void {
+		$api = $this->api( null );
+		$this->cache[ 'store_audit_wporg_' . md5( 'plugin:old' ) ] = array(
+			'status'       => 'found',
+			'version'      => '1',
+			'last_updated' => 5,
+			'reason'       => '',
+		);
+
+		$info = $api->plugin( 'old' );
+
+		$this->assertSame( '', $info['name'] );
+		$this->assertFalse( $info['security'] );
 	}
 
 	/**

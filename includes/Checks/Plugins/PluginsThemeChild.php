@@ -202,11 +202,18 @@ final class PluginsThemeChild extends AbstractCheck {
 		if ( ! is_dir( $dir ) ) {
 			return $out;
 		}
-		$dir      = rtrim( $dir, '/\\' );
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $dir, \FilesystemIterator::SKIP_DOTS )
-		);
-		$count    = 0;
+		$dir = rtrim( $dir, '/\\' );
+		try {
+			// CATCH_GET_CHILD skips a sub folder that cannot be read instead of stopping the whole listing.
+			$iterator = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator( $dir, \FilesystemIterator::SKIP_DOTS ),
+				\RecursiveIteratorIterator::LEAVES_ONLY,
+				\RecursiveIteratorIterator::CATCH_GET_CHILD
+			);
+		} catch ( \UnexpectedValueException ) {
+			return $out;
+		}
+		$count = 0;
 		foreach ( $iterator as $file ) {
 			if ( ! $file instanceof \SplFileInfo || ! $file->isFile() ) {
 				continue;

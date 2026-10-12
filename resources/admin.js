@@ -37,7 +37,7 @@
 	}
 
 	function fmt( template, args ) {
-		return String( template ).replace( /%(\d)\$s/g, function ( m, n ) {
+		return String( template ).replace( /%(\d)\$[sd]/g, function ( m, n ) {
 			return String( args[ parseInt( n, 10 ) - 1 ] );
 		} );
 	}
@@ -240,18 +240,22 @@
 		big.appendChild( el( 'span', 'store-audit-score-label', S.outOf ) );
 		summary.appendChild( big );
 		summary.appendChild( el( 'div', 'store-audit-score-title', S.score ) );
+		if ( score.incomplete ) {
+			summary.appendChild( el( 'div', 'store-audit-score-note', fmt( S.incomplete, [ score.checked || 0, score.total || 0 ] ) ) );
+		}
 		summary.appendChild( renderCounts( results ) );
 
 		var chips = el( 'div', 'store-audit-chips' );
 		var sectionIds = Object.keys( score.sections || {} );
 		sectionIds.forEach( function ( id ) {
 			var s = score.sections[ id ];
-			var chip = el( 'a', 'store-audit-chip ' + scoreClass( s.score ) );
+			var hasScore = null !== s.score && undefined !== s.score;
+			var chip = el( 'a', 'store-audit-chip ' + ( hasScore ? scoreClass( s.score ) : 'is-incomplete' ) );
 			chip.href = '#store-audit-section-' + id;
 			chip.setAttribute( 'data-target', 'store-audit-section-' + id );
 			chip.addEventListener( 'click', scrollToSection );
 			chip.appendChild( el( 'span', 'store-audit-chip-label', s.label ) );
-			chip.appendChild( el( 'span', 'store-audit-chip-score', s.score ) );
+			chip.appendChild( el( 'span', 'store-audit-chip-score', hasScore ? s.score : S.incompleteSection ) );
 			chips.appendChild( chip );
 		} );
 		summary.appendChild( chips );
@@ -346,6 +350,7 @@
 		progressEl.hidden = false;
 		setProgress( 0, 1, '' );
 		var failed = [];
+		var stage = 'start';
 
 		post( 'store_audit_start', {}, CHECK_TIMEOUT_MS ).then( function ( run ) {
 			var checks = run.checks || [];
@@ -360,6 +365,7 @@
 			} );
 			return chain.then( function () {
 				setProgress( checks.length, checks.length, '' );
+				stage = 'finish';
 				return post( 'store_audit_finish', { run_id: run.run_id }, CHECK_TIMEOUT_MS );
 			} );
 		} ).then( function ( report ) {
@@ -375,7 +381,8 @@
 			showLast( report );
 		} ).catch( function ( err ) {
 			setExportsVisible( !! cfg.lastReport );
-			reportEl.appendChild( el( 'div', 'notice notice-error inline', ( err && err.message ) ? S.failedStart + ' (' + err.message + ')' : S.failedStart ) );
+			var failMessage = 'finish' === stage ? S.failedEnd : S.failedStart;
+			reportEl.appendChild( el( 'div', 'notice notice-error inline', ( err && err.message ) ? failMessage + ' (' + err.message + ')' : failMessage ) );
 		} ).finally( function () {
 			progressEl.hidden = true;
 			runBtn.disabled = false;

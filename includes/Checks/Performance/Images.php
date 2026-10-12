@@ -12,6 +12,7 @@ namespace StoreAudit\Checks\Performance;
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
 use StoreAudit\Result;
+use StoreAudit\Support\ActivePlugins;
 use StoreAudit\Support\Arr;
 use StoreAudit\Support\Db;
 
@@ -23,6 +24,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Image quality and format.
  */
 final class Images extends AbstractCheck {
+
+	/**
+	 * Image optimizers that turn images into WebP or AVIF and serve them through rewrite rules or the page markup.
+	 * The media library keeps the original files, so the library alone cannot show their work.
+	 */
+	private const OPTIMIZERS = array(
+		'shortpixel-image-optimiser' => 'ShortPixel',
+		'imagify'                    => 'Imagify',
+		'ewww-image-optimizer'       => 'EWWW Image Optimizer',
+		'optimole-wp'                => 'Optimole',
+		'webp-converter-for-media'   => 'Converter for Media',
+		'webp-express'               => 'WebP Express',
+	);
 
 	/**
 	 * Data to evaluate (tests) or null to read the live site.
@@ -111,7 +125,17 @@ final class Images extends AbstractCheck {
 				'meta' => is_array( $meta ) ? $meta : null,
 			);
 		}
-		return array( 'images' => $list );
+		$optimizer = '';
+		foreach ( ActivePlugins::slugs() as $slug ) {
+			if ( isset( self::OPTIMIZERS[ $slug ] ) ) {
+				$optimizer = self::OPTIMIZERS[ $slug ];
+				break;
+			}
+		}
+		return array(
+			'images'    => $list,
+			'optimizer' => $optimizer,
+		);
 	}
 
 	/**
@@ -129,8 +153,9 @@ final class Images extends AbstractCheck {
 			return Result::info( __( 'There are no images in the media library to check.', 'store-audit-for-woocommerce' ) );
 		}
 
-		$modern = array( 'image/webp', 'image/avif' );
-		$is_new = static function ( array $image ) use ( $modern ): bool {
+		$optimizer = Arr::get_string( $d, 'optimizer' );
+		$modern    = array( 'image/webp', 'image/avif' );
+		$is_new    = static function ( array $image ) use ( $modern ): bool {
 			if ( in_array( $image['mime'] ?? '', $modern, true ) ) {
 				return true;
 			}
@@ -164,29 +189,44 @@ final class Images extends AbstractCheck {
 			}
 		}
 
+		$sample = sprintf(
+			/* translators: %d: number of images sampled. */
+			_n( 'Of the latest %d image', 'Of the latest %d images', $total, 'store-audit-for-woocommerce' ),
+			$total
+		);
+		$dims = sprintf(
+			/* translators: %d: number of images without saved dimensions. */
+			_n( '%d has no saved dimensions', '%d have no saved dimensions', $no_dims, 'store-audit-for-woocommerce' ),
+			$no_dims
+		);
+		$details = array();
+		if ( $no_dims > 0 ) {
+			$details[] = __( 'Images without dimensions cause the page to jump while loading (layout shift).', 'store-audit-for-woocommerce' );
+		}
+
+		if ( '' !== $optimizer ) {
+			// The optimizer serves WebP or AVIF outside the media library, so the library cannot show it.
+			$summary = sprintf(
+				/* translators: 1: sample size, for example "Of the latest 23 images", 2: images without saved dimensions, 3: name of the image optimizer plugin. */
+				__( '%1$s, %2$s. Images are served as WebP by %3$s, not checked.', 'store-audit-for-woocommerce' ),
+				$sample,
+				$dims,
+				$optimizer
+			);
+			return $no_dims > $total / 10 ? Result::warning( $summary, $details ) : Result::info( $summary, $details );
+		}
+
 		$summary = sprintf(
 			/* translators: 1: sample size, for example "Of the latest 23 images", 2: images without size information, 3: images without WebP or AVIF. */
 			__( '%1$s, %2$s and %3$s.', 'store-audit-for-woocommerce' ),
-			sprintf(
-				/* translators: %d: number of images sampled. */
-				_n( 'Of the latest %d image', 'Of the latest %d images', $total, 'store-audit-for-woocommerce' ),
-				$total
-			),
-			sprintf(
-				/* translators: %d: number of images without saved dimensions. */
-				_n( '%d has no saved dimensions', '%d have no saved dimensions', $no_dims, 'store-audit-for-woocommerce' ),
-				$no_dims
-			),
+			$sample,
+			$dims,
 			sprintf(
 				/* translators: %d: number of images without a WebP or AVIF version. */
 				_n( '%d has no WebP or AVIF version', '%d have no WebP or AVIF version', $old, 'store-audit-for-woocommerce' ),
 				$old
 			)
 		);
-		$details = array();
-		if ( $no_dims > 0 ) {
-			$details[] = __( 'Images without dimensions cause the page to jump while loading (layout shift).', 'store-audit-for-woocommerce' );
-		}
 		if ( $old > $total / 2 ) {
 			$details[] = __( 'Pages load slower on mobile when images are not WebP or AVIF.', 'store-audit-for-woocommerce' );
 		}

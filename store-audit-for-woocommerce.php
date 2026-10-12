@@ -32,13 +32,23 @@ define( 'STORE_AUDIT_URL', plugin_dir_url( __FILE__ ) );
 
 require_once STORE_AUDIT_PATH . 'includes/autoload.php';
 
+// The limits as the host set them, before the audit raises anything for its own work.
+\StoreAudit\EnvSnapshot::capture();
+
 add_action(
 	'before_woocommerce_init',
 	static function (): void {
 		if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
 			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__, true );
 		}
 	}
 );
 
-\StoreAudit\Plugin::instance()->boot();
+// Boot once every plugin is loaded, so WooCommerce can be detected by its class on a single site and on a network.
+add_action(
+	'plugins_loaded',
+	static function (): void {
+		\StoreAudit\Plugin::instance()->boot();
+	}
+);

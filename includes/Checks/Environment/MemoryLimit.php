@@ -11,6 +11,7 @@ namespace StoreAudit\Checks\Environment;
 
 use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\Section;
+use StoreAudit\EnvSnapshot;
 use StoreAudit\Result;
 use StoreAudit\Support\Arr;
 
@@ -82,16 +83,15 @@ final class MemoryLimit extends AbstractCheck {
 	}
 
 	/**
-	 * Read the live site.
+	 * Read the values the site had when the plugin loaded, before the audit raised the limits for its own work.
 	 *
 	 * @return array<string,mixed>
 	 */
 	private function collect(): array {
-		$wp  = defined( 'WP_MEMORY_LIMIT' ) ? wp_convert_hr_to_bytes( Arr::to_string( constant( 'WP_MEMORY_LIMIT' ) ) ) : 0;
-		$ini = ini_get( 'memory_limit' );
+		$snapshot = EnvSnapshot::get();
 		return array(
-			'wp'  => $wp,
-			'php' => wp_convert_hr_to_bytes( $ini ),
+			'wp'  => '' !== $snapshot['wp_memory_limit'] ? wp_convert_hr_to_bytes( $snapshot['wp_memory_limit'] ) : 0,
+			'php' => wp_convert_hr_to_bytes( $snapshot['memory_limit'] ),
 		);
 	}
 
@@ -122,8 +122,11 @@ final class MemoryLimit extends AbstractCheck {
 			return Result::ok( __( 'Memory is not limited.', 'store-audit-for-woocommerce' ), $details );
 		}
 
-		// What a page load really gets is the higher of the two values.
+		// What a page load gets is the higher of the two values, provided WordPress may raise the PHP limit.
 		$effective = max( $wp, (int) $php );
+		if ( $wp > (int) $php ) {
+			$details[] = __( 'WordPress raises the PHP limit to WP_MEMORY_LIMIT only when the host allows changing it while the site runs. If the host does not, pages get the lower PHP memory_limit.', 'store-audit-for-woocommerce' );
+		}
 
 		if ( $effective < 134217728 ) {
 			return Result::critical(

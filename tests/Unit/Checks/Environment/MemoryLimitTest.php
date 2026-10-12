@@ -132,4 +132,65 @@ final class MemoryLimitTest extends TestCase {
 		$this->assertNotSame( '', $check->fix_hint() );
 		$this->assertDoesNotMatchRegularExpression( '/[\x{2013}\x{2014}]/u', $check->explanation() . $check->fix_hint() . $check->title() );
 	}
+
+	/**
+	 * Tear down the snapshot so other tests start clean.
+	 */
+	protected function tear_down(): void {
+		\StoreAudit\EnvSnapshot::reset();
+		parent::tear_down();
+	}
+
+	/**
+	 * When WordPress would have to raise the PHP limit, the result says that this only works if the host allows it.
+	 */
+	public function test_wp_limit_above_php_limit_carries_the_caveat(): void {
+		$result = $this->run_with(
+			array(
+				'wp'  => 268435456,
+				'php' => 134217728,
+			)
+		);
+
+		$this->assertSame( 'ok', $result->severity() );
+		$this->assertStringContainsString( 'only when the host allows', implode( ' ', $result->details() ) );
+		$this->assertStringNotContainsString(
+			'only when the host allows',
+			implode(
+				' ',
+				$this->run_with(
+					array(
+						'wp'  => 134217728,
+						'php' => 268435456,
+					)
+				)->details()
+			)
+		);
+	}
+
+	/**
+	 * The live check reads the snapshot of the values taken when the plugin loaded.
+	 */
+	public function test_reads_the_snapshot_not_the_live_value(): void {
+		Functions\when( 'wp_convert_hr_to_bytes' )->alias(
+			static fn( string $value ): int => (int) $value * 1048576
+		);
+		\StoreAudit\EnvSnapshot::set( '100M', 0 );
+
+		$result = ( new MemoryLimit() )->run();
+
+		$this->assertSame( 'critical', $result->severity() );
+	}
+
+	/**
+	 * A WP_MEMORY_LIMIT from the snapshot counts when it is higher.
+	 */
+	public function test_snapshot_wp_limit_counts(): void {
+		Functions\when( 'wp_convert_hr_to_bytes' )->alias(
+			static fn( string $value ): int => (int) $value * 1048576
+		);
+		\StoreAudit\EnvSnapshot::set( '128M', 0, '256M' );
+
+		$this->assertSame( 'ok', ( new MemoryLimit() )->run()->severity() );
+	}
 }

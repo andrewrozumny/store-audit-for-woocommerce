@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 namespace StoreAudit;
 
+use StoreAudit\Checks\AbstractCheck;
 use StoreAudit\Checks\CheckInterface;
+use StoreAudit\Support\NotCheckedException;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,27 +23,57 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Runner {
 
 	/**
+	 * Seconds a single check may run when the host allows less.
+	 */
+	private const MIN_TIME_LIMIT = 30;
+
+	/**
+	 * The time limit to ask for, or null to leave it alone. Only a limit that is set and shorter than the minimum is
+	 * raised; zero (unlimited, as on the command line) and longer limits are never touched, and nothing is lowered.
+	 *
+	 * @param int $current Current max_execution_time in seconds.
+	 */
+	public static function time_limit_to_set( int $current ): ?int {
+		return $current > 0 && $current < self::MIN_TIME_LIMIT ? self::MIN_TIME_LIMIT : null;
+	}
+
+	/**
+	 * Whether the check hides its details from exports. Checks that do not extend AbstractCheck never do.
+	 *
+	 * @param CheckInterface $check Check.
+	 */
+	private static function is_sensitive( CheckInterface $check ): bool {
+		return $check instanceof AbstractCheck && $check->is_sensitive();
+	}
+
+	/**
 	 * Run one check; never throws.
 	 *
 	 * @param CheckInterface $check Check.
-	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int}
+	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int,sensitive:bool}
 	 */
 	public function run_one( CheckInterface $check ): array {
 		if ( function_exists( 'wp_raise_memory_limit' ) ) {
 			wp_raise_memory_limit( 'admin' );
 		}
-		if ( function_exists( 'set_time_limit' ) ) {
-			@set_time_limit( 30 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,Squiz.PHP.DiscouragedFunctions.Discouraged -- Silenced on purpose: the host may disable the function.
+		$new_limit = self::time_limit_to_set( (int) ini_get( 'max_execution_time' ) );
+		if ( null !== $new_limit && function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( $new_limit ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged,Squiz.PHP.DiscouragedFunctions.Discouraged -- Silenced on purpose: the host may disable the function.
 		}
 
 		$start = microtime( true );
 		try {
 			$result = $check->run();
 		} catch ( \Throwable $e ) {
-			$message = sanitize_text_field( $e->getMessage() );
-			$result  = Result::error(
-				/* translators: %s: error message. */
-				sprintf( __( 'Could not check: %s', 'store-audit-for-woocommerce' ), $message )
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				// The full text goes to the PHP error log only; the report never carries paths or raw messages.
+				error_log( 'Store Audit: check ' . $check->id() . ' failed: ' . sanitize_text_field( $e->getMessage() ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only log line.
+			}
+			$result = Result::error(
+				$e instanceof NotCheckedException
+					/* translators: %s: reason, for example "the database table wp_wc_orders does not exist.". */
+					? sprintf( __( 'Could not check: %s', 'store-audit-for-woocommerce' ), sanitize_text_field( $e->getMessage() ) )
+					: __( 'Could not check: an internal error occurred (details in the PHP error log when debugging is on).', 'store-audit-for-woocommerce' )
 			);
 		}
 		$duration = (int) round( ( microtime( true ) - $start ) * 1000 );
@@ -59,6 +91,7 @@ final class Runner {
 			'explanation' => $check->explanation(),
 			'fix_hint'    => $fix_hint,
 			'duration_ms' => $duration,
+			'sensitive'   => self::is_sensitive( $check ),
 		);
 	}
 
@@ -67,7 +100,7 @@ final class Runner {
 	 * "not checked" and never as a pass.
 	 *
 	 * @param CheckInterface $check Check.
-	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int}
+	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int,sensitive:bool}
 	 */
 	public function not_run( CheckInterface $check ): array {
 		return array(
@@ -80,6 +113,7 @@ final class Runner {
 			'explanation' => $check->explanation(),
 			'fix_hint'    => '',
 			'duration_ms' => 0,
+			'sensitive'   => false,
 		);
 	}
 

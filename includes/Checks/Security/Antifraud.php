@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Result;
+use StoreAudit\Support\ActivePlugins;
 use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,25 +23,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Antifraud extends AbstractSecurityCheck {
 
 	/**
-	 * Plugins that give some protection against bots, fake orders or password guessing.
+	 * Plugins that limit password guessing on the login form. Scanners such as Sucuri Scanner are not in the list:
+	 * they report problems but stop nothing.
 	 */
-	private const KNOWN = array(
-		'woocommerce-anti-fraud',
+	private const LOGIN = array(
 		'wordfence',
 		'limit-login-attempts-reloaded',
 		'loginizer',
-		'advanced-google-recaptcha',
-		'google-captcha',
-		'simple-cloudflare-turnstile',
-		'recaptcha-for-woocommerce',
-		'cleantalk-spam-protect',
-		'hcaptcha-for-forms-and-more',
 		'solid-security',
 		'better-wp-security',
+		'ithemes-security-pro',
 		'all-in-one-wp-security-and-firewall',
 		'wp-cerber',
 		'wp-defender',
-		'sucuri-scanner',
+		'defender-security',
+		'google-captcha',
+		'cleantalk-spam-protect',
+	);
+
+	/**
+	 * Plugins that put a captcha or fraud scoring in front of the checkout.
+	 */
+	private const CHECKOUT = array(
+		'woocommerce-anti-fraud',
+		'advanced-google-recaptcha',
+		'simple-cloudflare-turnstile',
+		'recaptcha-for-woocommerce',
+		'hcaptcha-for-forms-and-more',
+	);
+
+	/**
+	 * Payment gateways with built-in fraud screening (Stripe Radar, WooPayments, PayPal).
+	 */
+	private const GATEWAYS = array(
+		'woocommerce-payments',
+		'woocommerce-gateway-stripe',
+		'woocommerce-paypal-payments',
 	);
 
 	/**
@@ -77,56 +95,62 @@ final class Antifraud extends AbstractSecurityCheck {
 	 * Explanation.
 	 */
 	public function explanation(): string {
-		return __( 'Card testing bots can run thousands of fake payments through a store. The merchant pays the fees, the payment account gets flagged, and real customers can be blocked. A captcha, login limiter or anti-fraud plugin slows them down.', 'store-audit-for-woocommerce' );
+		return __( 'Card testing bots can run thousands of fake payments through a store. The merchant pays the fees, the payment account gets flagged, and real customers can be blocked. A captcha on checkout, fraud rules at the payment provider and a login limiter slow them down.', 'store-audit-for-woocommerce' );
 	}
 
 	/**
 	 * Fix hint.
 	 */
 	public function fix_hint(): string {
-		return __( 'Install and configure a captcha or login-limit plugin, and turn on fraud tools in your payment provider.', 'store-audit-for-woocommerce' );
+		return __( 'Add a captcha on checkout and a login limiter, and turn on fraud rules at your payment provider.', 'store-audit-for-woocommerce' );
 	}
 
 	/**
 	 * Run.
 	 */
 	public function run(): Result {
-		$plugins = null !== $this->active ? Arr::to_string_list( call_user_func( $this->active ) ) : $this->active_plugins();
-		$slugs   = array();
-		foreach ( $plugins as $basename ) {
-			$slug = explode( '/', $basename )[0];
-			$slugs[ preg_replace( '/\.php$/', '', $slug ) ?? $slug ] = true;
-		}
+		$slugs = null !== $this->active ? ActivePlugins::slugs_of( Arr::to_string_list( call_user_func( $this->active ) ) ) : ActivePlugins::slugs();
 
-		$known = $this->known_slugs();
-		$hits  = array_values( array_filter( $known, static fn ( string $slug ): bool => isset( $slugs[ $slug ] ) ) );
-
-		if ( array() !== $hits ) {
-			return Result::ok(
-				/* translators: %s: plugin names. */
-				sprintf( __( 'A protection plugin is active: %s. This only checks that it is installed, not how it is set up.', 'store-audit-for-woocommerce' ), implode( ', ', $hits ) ),
-				$hits
-			);
-		}
-		if ( isset( $slugs['woocommerce-gateway-stripe'] ) ) {
-			return Result::info( __( 'Only Stripe is active: its built-in Radar rules give partial protection, but no captcha or login limiter was found.', 'store-audit-for-woocommerce' ) );
-		}
-		return Result::warning( __( 'No known anti-fraud, captcha or login-limit plugin is active, so card testing bots and password guessing meet no resistance.', 'store-audit-for-woocommerce' ) );
-	}
-
-	/**
-	 * Active plugin basenames, including network-wide ones.
-	 *
-	 * @return list<string>
-	 */
-	private function active_plugins(): array {
-		$active = Arr::to_string_list( get_option( 'active_plugins', array() ) );
-		if ( is_multisite() ) {
-			foreach ( array_keys( Arr::to_array( get_site_option( 'active_sitewide_plugins', array() ) ) ) as $sitewide ) {
-				$active[] = (string) $sitewide;
+		$login    = array();
+		$checkout = array();
+		foreach ( $this->known_slugs() as $slug ) {
+			if ( ! in_array( $slug, $slugs, true ) ) {
+				continue;
+			}
+			// A plugin added through the filter is trusted for both jobs.
+			$is_login    = in_array( $slug, self::LOGIN, true );
+			$is_checkout = in_array( $slug, self::CHECKOUT, true );
+			if ( $is_login || ! $is_checkout ) {
+				$login[] = $slug;
+			}
+			if ( $is_checkout || ! $is_login ) {
+				$checkout[] = $slug;
 			}
 		}
-		return $active;
+		foreach ( self::GATEWAYS as $gateway ) {
+			if ( in_array( $gateway, $slugs, true ) ) {
+				$checkout[] = $gateway;
+			}
+		}
+
+		$none    = __( 'none found', 'store-audit-for-woocommerce' );
+		$details = array(
+			/* translators: %s: plugin names. */
+			sprintf( __( 'Login brute force protection: %s', 'store-audit-for-woocommerce' ), array() === $login ? $none : implode( ', ', $login ) ),
+			/* translators: %s: plugin names. */
+			sprintf( __( 'Checkout card-testing protection: %s', 'store-audit-for-woocommerce' ), array() === $checkout ? $none : implode( ', ', $checkout ) ),
+		);
+
+		if ( array() !== $login && array() !== $checkout ) {
+			return Result::ok( __( 'Login and checkout both have protection plugins. This only checks that they are installed, not how they are set up.', 'store-audit-for-woocommerce' ), $details );
+		}
+		if ( array() !== $login ) {
+			return Result::info( __( 'Password guessing is limited, but nothing protects the checkout against card testing bots. Add a captcha on checkout or turn on fraud rules at your payment provider.', 'store-audit-for-woocommerce' ), $details );
+		}
+		if ( array() !== $checkout ) {
+			return Result::info( __( 'The checkout has protection against card testing, but nothing limits password guessing on the login form. Add a login limiter or a captcha on login.', 'store-audit-for-woocommerce' ), $details );
+		}
+		return Result::warning( __( 'No known login limiter, captcha or fraud tool is active, so card testing bots and password guessing meet no resistance.', 'store-audit-for-woocommerce' ), $details );
 	}
 
 	/**
@@ -136,13 +160,22 @@ final class Antifraud extends AbstractSecurityCheck {
 	 */
 	private function known_slugs(): array {
 		$known = $this->filtered_slugs();
-		return is_array( $known ) ? array_values( array_map( static fn( mixed $slug ): string => Arr::to_string( $slug ), $known ) ) : self::KNOWN;
+		return is_array( $known ) ? array_values( array_map( static fn( mixed $slug ): string => Arr::to_string( $slug ), $known ) ) : self::known();
+	}
+
+	/**
+	 * Built-in slugs of login and checkout protection plugins.
+	 *
+	 * @return list<string>
+	 */
+	private static function known(): array {
+		return array_merge( self::LOGIN, self::CHECKOUT );
 	}
 
 	/**
 	 * Run the slugs through the public filter. The result is untyped on purpose.
 	 */
 	private function filtered_slugs(): mixed {
-		return apply_filters( 'store_audit_antifraud_plugins', self::KNOWN );
+		return apply_filters( 'store_audit_antifraud_plugins', self::known() );
 	}
 }

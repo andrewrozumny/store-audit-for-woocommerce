@@ -57,9 +57,9 @@ final class OrdersStorageTest extends TestCase {
 	}
 
 	/**
-	 * Few orders is info.
+	 * Few orders is ok.
 	 */
-	public function test_few_orders_is_info(): void {
+	public function test_few_orders_is_ok(): void {
 		$result = $this->run_with(
 			array(
 				'wc'     => true,
@@ -68,7 +68,7 @@ final class OrdersStorageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'info', $result->severity() );
+		$this->assertSame( 'ok', $result->severity() );
 		$this->assertStringContainsString( '20 orders', $result->summary() . implode( ' ', $result->details() ) );
 	}
 
@@ -88,9 +88,9 @@ final class OrdersStorageTest extends TestCase {
 	}
 
 	/**
-	 * Many hpos orders is info.
+	 * Many hpos orders is ok.
 	 */
-	public function test_many_hpos_orders_is_info(): void {
+	public function test_many_hpos_orders_is_ok(): void {
 		$result = $this->run_with(
 			array(
 				'wc'     => true,
@@ -99,7 +99,7 @@ final class OrdersStorageTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 'info', $result->severity() );
+		$this->assertSame( 'ok', $result->severity() );
 		$this->assertStringContainsString( 'HPOS', $result->summary() . implode( ' ', $result->details() ) );
 	}
 

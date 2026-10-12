@@ -43,14 +43,7 @@ final class Report {
 		$score  = Score::calculate( $results );
 		$labels = Section::labels();
 
-		$sections = array();
-		foreach ( $score['sections'] as $id => $data ) {
-			$sections[ $id ] = array(
-				'label'  => $labels[ $id ] ?? $id,
-				'score'  => $data['score'],
-				'counts' => $data['counts'],
-			);
-		}
+		$sections = self::score_sections( $score['sections'], $labels );
 
 		return array(
 			'generated_at'   => gmdate( 'Y-m-d\TH:i:s\Z' ),
@@ -59,11 +52,36 @@ final class Report {
 			'wp_version'     => get_bloginfo( 'version' ),
 			'wc_version'     => defined( 'WC_VERSION' ) ? WC_VERSION : '',
 			'score'          => array(
-				'overall'  => $score['overall'],
-				'sections' => $sections,
+				'overall'    => $score['overall'],
+				'checked'    => $score['checked'],
+				'total'      => $score['total'],
+				'incomplete' => $score['incomplete'],
+				'sections'   => $sections,
 			),
 			'results'        => $results,
 		);
+	}
+
+	/**
+	 * Section scores as stored in a report: the calculated numbers plus the section label.
+	 *
+	 * @param array<string,array{score:int|null,counts:array<string,int>,checked:int,total:int,incomplete:bool}> $sections Calculated sections.
+	 * @param array<string,string>                                                                               $labels   Section labels.
+	 * @return array<string,array{label:string,score:int|null,counts:array<string,int>,checked:int,total:int,incomplete:bool}>
+	 */
+	private static function score_sections( array $sections, array $labels ): array {
+		$out = array();
+		foreach ( $sections as $id => $data ) {
+			$out[ $id ] = array(
+				'label'      => $labels[ $id ] ?? $id,
+				'score'      => $data['score'],
+				'counts'     => $data['counts'],
+				'checked'    => $data['checked'],
+				'total'      => $data['total'],
+				'incomplete' => $data['incomplete'],
+			);
+		}
+		return $out;
 	}
 
 	/**
@@ -123,7 +141,7 @@ final class Report {
 	 * One result row with known keys and types. An unknown severity counts as "not checked".
 	 *
 	 * @param mixed $row Stored row.
-	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int}|null
+	 * @return array{id:string,section:string,title:string,severity:string,summary:string,details:list<string>,explanation:string,fix_hint:string,duration_ms:int,sensitive:bool}|null
 	 */
 	public static function normalize_row( mixed $row ): ?array {
 		if ( ! is_array( $row ) ) {
@@ -147,22 +165,24 @@ final class Report {
 			'explanation' => Arr::get_string( $row, 'explanation' ),
 			'fix_hint'    => Arr::get_string( $row, 'fix_hint' ),
 			'duration_ms' => Arr::get_int( $row, 'duration_ms' ),
+			'sensitive'   => Arr::get_bool( $row, 'sensitive' ),
 		);
 	}
 
 	/**
-	 * The stored score when it has the expected shape, otherwise a score worked out from the rows.
+	 * The stored score when it has the expected shape, otherwise a score worked out from the rows. A score stored
+	 * by an older version (without the checked/total/incomplete fields) is worked out again too.
 	 *
 	 * @param mixed                     $stored Stored score.
 	 * @param list<array<string,mixed>> $rows   Normalised rows.
-	 * @return array{overall:int,sections:array<string,array<string,mixed>>}
+	 * @return array{overall:int,checked:int,total:int,incomplete:bool,sections:array<string,array<string,mixed>>}
 	 */
 	private static function normalize_score( mixed $stored, array $rows ): array {
-		if ( is_array( $stored ) && isset( $stored['overall'], $stored['sections'] ) && is_numeric( $stored['overall'] ) && is_array( $stored['sections'] ) ) {
+		if ( is_array( $stored ) && isset( $stored['overall'], $stored['checked'], $stored['total'], $stored['incomplete'], $stored['sections'] ) && is_numeric( $stored['overall'] ) && is_numeric( $stored['checked'] ) && is_numeric( $stored['total'] ) && is_array( $stored['sections'] ) ) {
 			$sections = array();
 			$valid    = true;
 			foreach ( $stored['sections'] as $id => $data ) {
-				if ( ! is_string( $id ) || ! is_array( $data ) || ! isset( $data['score'], $data['label'], $data['counts'] ) || ! is_numeric( $data['score'] ) || ! is_string( $data['label'] ) || ! is_array( $data['counts'] ) ) {
+				if ( ! is_string( $id ) || ! is_array( $data ) || ! array_key_exists( 'score', $data ) || ! isset( $data['label'], $data['counts'], $data['checked'], $data['total'], $data['incomplete'] ) || ( null !== $data['score'] && ! is_numeric( $data['score'] ) ) || ! is_string( $data['label'] ) || ! is_array( $data['counts'] ) ) {
 					$valid = false;
 					break;
 				}
@@ -170,47 +190,105 @@ final class Report {
 			}
 			if ( $valid ) {
 				return array(
-					'overall'  => Arr::to_int( $stored['overall'] ),
-					'sections' => $sections,
+					'overall'    => Arr::to_int( $stored['overall'] ),
+					'checked'    => Arr::to_int( $stored['checked'] ),
+					'total'      => Arr::to_int( $stored['total'] ),
+					'incomplete' => (bool) $stored['incomplete'],
+					'sections'   => $sections,
 				);
 			}
 		}
-		$score  = Score::calculate( $rows );
-		$labels = Section::labels();
-		$out    = array();
-		foreach ( $score['sections'] as $id => $data ) {
-			$out[ $id ] = array(
-				'label'  => $labels[ $id ] ?? $id,
-				'score'  => $data['score'],
-				'counts' => $data['counts'],
-			);
-		}
+		$score = Score::calculate( $rows );
 		return array(
-			'overall'  => $score['overall'],
-			'sections' => $out,
+			'overall'    => $score['overall'],
+			'checked'    => $score['checked'],
+			'total'      => $score['total'],
+			'incomplete' => $score['incomplete'],
+			'sections'   => self::score_sections( $score['sections'], Section::labels() ),
 		);
+	}
+
+	/**
+	 * The one-line note that marks an incomplete overall score, or an empty string for a complete one.
+	 *
+	 * @param array<string,mixed> $score The `score` part of a report.
+	 */
+	public static function incomplete_note( array $score ): string {
+		if ( ! Arr::get_bool( $score, 'incomplete' ) ) {
+			return '';
+		}
+		return Score::incomplete_note( Arr::get_int( $score, 'checked' ), Arr::get_int( $score, 'total' ) );
+	}
+
+	/**
+	 * Whether attributions are added to exports (printed report, Markdown, JSON). The Store Audit screen in
+	 * wp-admin always shows it.
+	 */
+	public static function show_attribution(): bool {
+		return (bool) apply_filters( 'store_audit_show_attribution', true );
+	}
+
+	/**
+	 * A copy of the report for sending elsewhere: the details of sensitive checks (account names, key names,
+	 * file names) are replaced with a count and a pointer to the Store Audit screen. Summaries never carry them.
+	 *
+	 * @param array<string,mixed> $report Report.
+	 * @return array<string,mixed>
+	 */
+	public static function redact_for_export( array $report ): array {
+		$rows = array();
+		foreach ( Arr::get_array( $report, 'results' ) as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$row = Arr::to_string_keyed( $row );
+			if ( Arr::get_bool( $row, 'sensitive' ) ) {
+				$count          = count( Arr::get_array( $row, 'details' ) );
+				$row['details'] = $count > 0 ? array(
+					sprintf(
+						/* translators: %d: number of items whose details are left out. */
+						_n( '%d item. Details are shown only on the Store Audit screen in wp-admin.', '%d items. Details are shown only on the Store Audit screen in wp-admin.', $count, 'store-audit-for-woocommerce' ),
+						$count
+					),
+				) : array();
+			}
+			$rows[] = $row;
+		}
+		$report['results'] = $rows;
+		return $report;
 	}
 
 	/**
 	 * Plain-text attribution line, shared by every export.
 	 */
 	public static function attribution(): string {
-		return 'Report generated by Store Audit for WooCommerce by Andrew Rozumny, ' . self::ATTRIBUTION_DOMAIN;
+		return sprintf(
+			/* translators: %s: web address of the plugin author. */
+			__( 'Report generated by Store Audit for WooCommerce by Andrew Rozumny, %s', 'store-audit-for-woocommerce' ),
+			self::ATTRIBUTION_DOMAIN
+		);
 	}
 
 	/**
 	 * Attribution as safe HTML, with the domain linked.
 	 */
 	public static function attribution_html(): string {
-		return esc_html( 'Report generated by Store Audit for WooCommerce by Andrew Rozumny, ' )
-			. '<a href="' . esc_url( self::ATTRIBUTION_URL ) . '" target="_blank" rel="noopener">' . esc_html( self::ATTRIBUTION_DOMAIN ) . '</a>';
+		return sprintf(
+			/* translators: %s: web address of the plugin author. */
+			esc_html__( 'Report generated by Store Audit for WooCommerce by Andrew Rozumny, %s', 'store-audit-for-woocommerce' ),
+			'<a href="' . esc_url( self::ATTRIBUTION_URL ) . '" target="_blank" rel="noopener">' . esc_html( self::ATTRIBUTION_DOMAIN ) . '</a>'
+		);
 	}
 
 	/**
 	 * Attribution as Markdown, with the domain linked.
 	 */
 	public static function attribution_markdown(): string {
-		return 'Report generated by Store Audit for WooCommerce by Andrew Rozumny, [' . self::ATTRIBUTION_DOMAIN . '](' . self::ATTRIBUTION_URL . ')';
+		return sprintf(
+			/* translators: %s: web address of the plugin author. */
+			__( 'Report generated by Store Audit for WooCommerce by Andrew Rozumny, %s', 'store-audit-for-woocommerce' ),
+			'[' . self::ATTRIBUTION_DOMAIN . '](' . self::ATTRIBUTION_URL . ')'
+		);
 	}
 
 	/**
@@ -243,12 +321,17 @@ final class Report {
 	}
 
 	/**
-	 * Pretty-printed JSON export with the attribution field.
+	 * Pretty-printed JSON export with the attribution field. Details of sensitive checks are left out unless
+	 * the full data is asked for (command line).
 	 *
 	 * @param array<string,mixed> $report Report.
+	 * @param bool                $redact Leave out the details of sensitive checks.
 	 */
-	public static function to_json( array $report ): string {
-		$data = array_merge( array( 'generated_by' => self::attribution() ), $report );
+	public static function to_json( array $report, bool $redact = true ): string {
+		if ( $redact ) {
+			$report = self::redact_for_export( $report );
+		}
+		$data = self::show_attribution() ? array_merge( array( 'generated_by' => self::attribution() ), $report ) : $report;
 		$json = wp_json_encode( $data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		return is_string( $json ) ? $json : '{}';
 	}
@@ -333,11 +416,16 @@ final class Report {
 	}
 
 	/**
-	 * Markdown export, usable as a work plan.
+	 * Markdown export, usable as a work plan. Details of sensitive checks are left out unless the full data is
+	 * asked for (command line).
 	 *
 	 * @param array<string,mixed> $report Report.
+	 * @param bool                $redact Leave out the details of sensitive checks.
 	 */
-	public static function to_markdown( array $report ): string {
+	public static function to_markdown( array $report, bool $redact = true ): string {
+		if ( $redact ) {
+			$report = self::redact_for_export( $report );
+		}
 		$labels   = Section::labels();
 		$score    = Arr::get_map( $report, 'score' );
 		$sections = Arr::get_map( $score, 'sections' );
@@ -365,7 +453,8 @@ final class Report {
 		);
 		$out[] = '';
 		$out[] = '- ' . __( 'Date:', 'store-audit-for-woocommerce' ) . ' ' . $date;
-		$out[] = '- ' . __( 'Overall score:', 'store-audit-for-woocommerce' ) . ' **' . $overall . ' / 100**';
+		$note  = self::incomplete_note( $score );
+		$out[] = '- ' . __( 'Overall score:', 'store-audit-for-woocommerce' ) . ' **' . $overall . ' / 100**' . ( '' !== $note ? ' (' . $note . ')' : '' );
 		if ( array() !== $env ) {
 			$out[] = '- ' . __( 'Versions:', 'store-audit-for-woocommerce' ) . ' ' . implode( ', ', $env );
 		}
@@ -379,7 +468,7 @@ final class Report {
 			$data   = Arr::to_string_keyed( $data );
 			$counts = Arr::get_map( $data, 'counts' );
 			$name   = self::md_text( Arr::get_string( $data, 'label', $labels[ $id ] ?? $id ) );
-			$out[]  = '| ' . str_replace( '|', '\\|', $name ) . ' | ' . Arr::get_int( $data, 'score' ) . ' | '
+			$out[]  = '| ' . str_replace( '|', '\\|', $name ) . ' | ' . self::section_score_text( $data, false ) . ' | '
 				. Arr::get_int( $counts, Result::CRITICAL ) . ' | ' . Arr::get_int( $counts, Result::WARNING ) . ' | '
 				. Arr::get_int( $counts, Result::INFO ) . ' | ' . Arr::get_int( $counts, Result::OK ) . ' |';
 		}
@@ -389,8 +478,8 @@ final class Report {
 			$section_data = Arr::get_map( $sections, $id );
 			$name         = self::md_text( Arr::get_string( $section_data, 'label', $labels[ $id ] ?? $id ) );
 			$head         = '## ' . $name;
-			if ( isset( $section_data['score'] ) ) {
-				$head .= ' (' . Arr::get_int( $section_data, 'score' ) . ' / 100)';
+			if ( array() !== $section_data ) {
+				$head .= ' (' . self::section_score_text( $section_data ) . ')';
 			}
 			$out[]  = $head;
 			$out[]  = '';
@@ -431,9 +520,24 @@ final class Report {
 			}
 		}
 
-		$out[] = '---';
-		$out[] = '';
-		$out[] = self::attribution_markdown();
+		if ( self::show_attribution() ) {
+			$out[] = '---';
+			$out[] = '';
+			$out[] = self::attribution_markdown();
+		}
 		return implode( "\n", $out ) . "\n";
+	}
+
+	/**
+	 * Section score for text outputs: "55 / 100", or the word "incomplete" when too few of its checks ran.
+	 *
+	 * @param array<string,mixed> $section  One section of the report score.
+	 * @param bool                $with_max Add " / 100" after the number.
+	 */
+	public static function section_score_text( array $section, bool $with_max = true ): string {
+		if ( ! isset( $section['score'] ) ) {
+			return __( 'incomplete', 'store-audit-for-woocommerce' );
+		}
+		return Arr::get_int( $section, 'score' ) . ( $with_max ? ' / 100' : '' );
 	}
 }

@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Write-capable API keys that nobody uses are a risk. Key values are never read or shown.
+ * API keys that nobody uses are a risk, and a key with write access most of all. Key values are never read or shown.
  */
 final class ApiKeys extends AbstractCheck {
 
@@ -75,7 +75,7 @@ final class ApiKeys extends AbstractCheck {
 	 * Explanation.
 	 */
 	public function explanation(): string {
-		return __( 'An API key with write access lets software change your products and orders. A key that was never used, or not for a year, is probably forgotten, and if it leaks someone can alter your store.', 'store-audit-for-woocommerce' );
+		return __( 'An API key lets software reach your store. A key with write access can change your products and orders, and even a read key hands out orders and customer data. A key that was never used, or not for a year, is probably forgotten, and if it leaks someone else gets that access.', 'store-audit-for-woocommerce' );
 	}
 
 	/**
@@ -92,11 +92,12 @@ final class ApiKeys extends AbstractCheck {
 		$keys   = ( $this->source )();
 		$cutoff = strtotime( '-12 months', $this->now );
 		$lines  = array();
+		$reads  = 0;
 
 		foreach ( Arr::to_array( $keys ) as $raw_key ) {
 			$key         = Arr::to_string_keyed( $raw_key );
 			$permissions = Arr::get_string( $key, 'permissions' );
-			if ( ! in_array( $permissions, array( 'write', 'read_write' ), true ) ) {
+			if ( ! in_array( $permissions, array( 'read', 'write', 'read_write' ), true ) ) {
 				continue;
 			}
 			$last_access = $key['last_access'] ?? null;
@@ -117,6 +118,9 @@ final class ApiKeys extends AbstractCheck {
 				continue;
 			}
 
+			if ( 'read' === $permissions ) {
+				++$reads;
+			}
 			$lines[] = sprintf(
 				/* translators: 1: key description, 2: permission, 3: user, 4: last access. */
 				__( '%1$s (%2$s, user %3$s): %4$s', 'store-audit-for-woocommerce' ),
@@ -128,16 +132,20 @@ final class ApiKeys extends AbstractCheck {
 		}
 
 		if ( array() === $lines ) {
-			return Result::ok( __( 'No unused or long-idle API keys with write access.', 'store-audit-for-woocommerce' ) );
+			return Result::ok( __( 'No unused or long-idle API keys.', 'store-audit-for-woocommerce' ) );
 		}
 
+		$details = DetailList::cap( $lines );
+		if ( $reads > 0 ) {
+			$details[] = __( 'A read key can still read orders and customer data, so an unused one is worth removing too.', 'store-audit-for-woocommerce' );
+		}
 		return Result::warning(
 			sprintf(
 				/* translators: %d: number of keys. */
-				_n( '%d API key with write access is unused or idle for over a year.', '%d API keys with write access are unused or idle for over a year.', count( $lines ), 'store-audit-for-woocommerce' ),
+				_n( '%d API key is unused or idle for over a year.', '%d API keys are unused or idle for over a year.', count( $lines ), 'store-audit-for-woocommerce' ),
 				count( $lines )
 			),
-			DetailList::cap( $lines )
+			$details
 		);
 	}
 
@@ -168,5 +176,12 @@ final class ApiKeys extends AbstractCheck {
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Details name accounts, files or keys, so exports do not carry them.
+	 */
+	public function is_sensitive(): bool {
+		return true;
 	}
 }

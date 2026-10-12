@@ -45,10 +45,10 @@ final class ScoreTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( 63, $score['sections']['security']['score'] );
+		$this->assertSame( 40, $score['sections']['security']['score'] );
 		$this->assertSame( 1, $score['sections']['security']['counts']['critical'] );
 		$this->assertSame( 1, $score['sections']['security']['counts']['ok'] );
-		$this->assertSame( 63, $score['overall'] );
+		$this->assertSame( 40, $score['overall'] );
 	}
 
 	/**
@@ -68,21 +68,22 @@ final class ScoreTest extends TestCase {
 	 * Overall is the weighted average of the included sections.
 	 */
 	public function test_overall_is_weighted(): void {
-		// Security (weight 30) at 75, performance (weight 10) at 100 -> (75*30 + 100*10) / 40 = 81.25.
+		// Security (weight 30) at 80, performance (weight 10) at 100 -> (80*30 + 100*10) / 40 = 85.
 		$score = Score::calculate(
 			array(
-				$this->row( 'security', 'critical' ),
+				$this->row( 'security', 'warning' ),
+				$this->row( 'security', 'warning' ),
 				$this->row( 'performance', 'ok' ),
 			)
 		);
 
-		$this->assertSame( 81, $score['overall'] );
+		$this->assertSame( 85, $score['overall'] );
 	}
 
 	/**
-	 * Sections with only errors (or no results) are left out.
+	 * A section where nothing ran keeps its place as incomplete and flags the report; it is not weighted.
 	 */
-	public function test_sections_without_real_results_are_excluded(): void {
+	public function test_section_with_only_errors_is_incomplete(): void {
 		$score = Score::calculate(
 			array(
 				$this->row( 'security', 'error' ),
@@ -90,9 +91,65 @@ final class ScoreTest extends TestCase {
 			)
 		);
 
-		$this->assertArrayNotHasKey( 'security', $score['sections'] );
+		$this->assertNull( $score['sections']['security']['score'] );
+		$this->assertTrue( $score['sections']['security']['incomplete'] );
 		$this->assertArrayNotHasKey( 'performance', $score['sections'] );
 		$this->assertSame( 90, $score['overall'] );
+		$this->assertTrue( $score['incomplete'] );
+		$this->assertSame( 1, $score['checked'] );
+		$this->assertSame( 2, $score['total'] );
+	}
+
+	/**
+	 * A whole Security section that did not run must not give a clean 100.
+	 */
+	public function test_security_all_error_is_not_a_clean_report(): void {
+		$rows = array();
+		for ( $i = 0; $i < 8; $i++ ) {
+			$rows[] = $this->row( 'security', 'error' );
+		}
+		for ( $i = 0; $i < 10; $i++ ) {
+			$rows[] = $this->row( 'environment', 'ok' );
+		}
+		$score = Score::calculate( $rows );
+
+		$this->assertTrue( $score['incomplete'] );
+		$this->assertSame( 10, $score['checked'] );
+		$this->assertSame( 18, $score['total'] );
+		$this->assertSame( 'Incomplete: 10 of 18 checks ran', Score::incomplete_note( $score['checked'], $score['total'] ) );
+	}
+
+	/**
+	 * More than half not checked hides the section score; exactly half does not.
+	 */
+	public function test_more_than_half_not_checked_hides_section_score(): void {
+		$half = Score::calculate( array( $this->row( 'environment', 'ok' ), $this->row( 'environment', 'error' ) ) );
+		$this->assertSame( 100, $half['sections']['environment']['score'] );
+		$this->assertFalse( $half['incomplete'] );
+
+		$most = Score::calculate( array( $this->row( 'environment', 'ok' ), $this->row( 'environment', 'error' ), $this->row( 'environment', 'error' ) ) );
+		$this->assertNull( $most['sections']['environment']['score'] );
+		$this->assertTrue( $most['incomplete'] );
+	}
+
+	/**
+	 * One critical caps its section at 40 and the report at 49, however many checks pass.
+	 */
+	public function test_single_critical_caps_section_and_overall(): void {
+		$rows = array( $this->row( 'security', 'critical' ) );
+		for ( $i = 0; $i < 12; $i++ ) {
+			$rows[] = $this->row( 'security', 'ok' );
+		}
+		foreach ( array( 'woocommerce', 'plugins', 'performance', 'environment' ) as $section ) {
+			for ( $i = 0; $i < 5; $i++ ) {
+				$rows[] = $this->row( $section, 'ok' );
+			}
+		}
+		$score = Score::calculate( $rows );
+
+		$this->assertSame( 40, $score['sections']['security']['score'] );
+		$this->assertLessThanOrEqual( 49, $score['overall'] );
+		$this->assertFalse( $score['incomplete'] );
 	}
 
 	/**
@@ -118,5 +175,6 @@ final class ScoreTest extends TestCase {
 
 		$this->assertSame( 0, $score['overall'] );
 		$this->assertSame( array(), $score['sections'] );
+		$this->assertFalse( $score['incomplete'] );
 	}
 }

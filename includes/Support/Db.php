@@ -21,12 +21,12 @@ final class Db {
 	/**
 	 * The WordPress database object.
 	 *
-	 * @throws \RuntimeException When the database object is not available.
+	 * @throws NotCheckedException When the database object is not available.
 	 */
 	public static function wpdb(): \wpdb {
 		global $wpdb;
 		if ( ! $wpdb instanceof \wpdb ) {
-			throw new \RuntimeException( 'The WordPress database object is not available.' );
+			throw new NotCheckedException( esc_html__( 'the WordPress database object is not available.', 'store-audit-for-woocommerce' ) );
 		}
 		return $wpdb;
 	}
@@ -47,11 +47,11 @@ final class Db {
 	 * log with database errors and read as "zero rows". The runner turns the exception into "not checked".
 	 *
 	 * @param string $table Full table name, with the prefix.
-	 * @throws \RuntimeException When the table does not exist.
+	 * @throws NotCheckedException When the table does not exist.
 	 */
 	public static function require_table( string $table ): void {
 		if ( ! self::table_exists( $table ) ) {
-			throw new \RuntimeException(
+			throw new NotCheckedException(
 				esc_html(
 					sprintf(
 						/* translators: %s: database table name. */

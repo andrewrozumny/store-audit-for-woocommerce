@@ -36,9 +36,33 @@ final class UploadsListingTest extends ProbeTestCase {
 	}
 
 	/**
-	 * Without a loopback the check is informational.
+	 * Without a loopback the check is not checked (an error row), never a pass.
 	 */
-	public function test_unreachable_is_info(): void {
-		$this->assertSame( 'info', ( new UploadsListing( $this->broken_probe() ) )->run()->severity() );
+	public function test_unreachable_is_not_checked(): void {
+		$this->assertSame( 'error', ( new UploadsListing( $this->broken_probe() ) )->run()->severity() );
+	}
+
+	/**
+	 * Uploads served from a CDN host are not applicable, not a blocked loopback.
+	 */
+	public function test_uploads_on_another_host_are_not_applicable(): void {
+		\Brain\Monkey\Functions\when( 'wp_upload_dir' )->justReturn( array( 'baseurl' => 'https://cdn.example.net/uploads' ) );
+
+		$result = ( new UploadsListing( $this->probe( array() ) ) )->run();
+
+		$this->assertSame( 'info', $result->severity() );
+		$this->assertStringContainsString( 'Not applicable', $result->summary() );
+		$this->assertStringContainsString( 'another host', $result->summary() );
+		$this->assertSame( array(), $this->requests );
+	}
+
+	/**
+	 * A site that cannot call itself says "not checked".
+	 */
+	public function test_loopback_failure_text(): void {
+		$result = ( new UploadsListing( $this->broken_probe() ) )->run();
+
+		$this->assertSame( 'error', $result->severity() );
+		$this->assertStringContainsString( 'could not reach itself', $result->summary() );
 	}
 }

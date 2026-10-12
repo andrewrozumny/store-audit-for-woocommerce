@@ -99,4 +99,16 @@ final class AjaxTest extends TestCase {
 			$_REQUEST = array();
 		}
 	}
+
+	/**
+	 * A shop manager (manage_woocommerce but not manage_options) is refused: the audit reads site-wide data.
+	 */
+	public function test_shop_manager_is_refused(): void {
+		Functions\when( 'check_ajax_referer' )->justReturn( 1 );
+		Functions\when( 'current_user_can' )->alias( static fn( string $cap ): bool => 'manage_options' !== $cap );
+
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'json_error:403' );
+		( new Ajax() )->start();
+	}
 }

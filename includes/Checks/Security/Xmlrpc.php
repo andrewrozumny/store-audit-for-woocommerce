@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace StoreAudit\Checks\Security;
 
 use StoreAudit\Result;
+use StoreAudit\Support\ActivePlugins;
+use StoreAudit\Support\Arr;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -19,6 +21,24 @@ if ( ! defined( 'ABSPATH' ) ) {
  * XML-RPC endpoint exposure.
  */
 final class Xmlrpc extends AbstractProbeCheck {
+
+	/**
+	 * Returns the names of the things on this site that need xmlrpc.php.
+	 *
+	 * @var callable
+	 */
+	private $dependents;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param SelfProbe|null $probe      Probe override for tests.
+	 * @param callable|null  $dependents Returns the names of the things that need xmlrpc.php (tests).
+	 */
+	public function __construct( ?SelfProbe $probe = null, ?callable $dependents = null ) {
+		parent::__construct( $probe );
+		$this->dependents = $dependents ?? array( $this, 'read_dependents' );
+	}
 
 	/**
 	 * Check id.
@@ -65,8 +85,40 @@ final class Xmlrpc extends AbstractProbeCheck {
 
 		$answer = $response->body();
 		if ( 200 === $response->status() && str_contains( $answer, '<methodResponse' ) && ! str_contains( $answer, '<fault>' ) ) {
+			$needed_by = Arr::to_string_list( ( $this->dependents )() );
+			if ( array() !== $needed_by ) {
+				return Result::info(
+					__( 'XML-RPC is open, and Jetpack or the WordPress.com connection needs it, so it should stay reachable.', 'store-audit-for-woocommerce' ),
+					array(
+						/* translators: %s: plugin names. */
+						sprintf( __( 'Needed by: %s', 'store-audit-for-woocommerce' ), implode( ', ', $needed_by ) ),
+					),
+					__( 'Keep xmlrpc.php open for Jetpack, but block system.multicall and pingbacks (most security plugins have a switch).', 'store-audit-for-woocommerce' )
+				);
+			}
 			return Result::warning( __( 'XML-RPC is open: anyone can call /xmlrpc.php, which is used for password guessing at scale.', 'store-audit-for-woocommerce' ) );
 		}
 		return Result::ok( __( 'XML-RPC is not answering requests.', 'store-audit-for-woocommerce' ) );
+	}
+
+	/**
+	 * Jetpack, WooPayments and a stored Jetpack connection, which all talk to the site through xmlrpc.php.
+	 *
+	 * @return list<string>
+	 */
+	private function read_dependents(): array {
+		$slugs = ActivePlugins::slugs();
+		$names = array();
+		if ( in_array( 'jetpack', $slugs, true ) ) {
+			$names[] = 'Jetpack';
+		}
+		if ( in_array( 'woocommerce-payments', $slugs, true ) ) {
+			$names[] = 'WooPayments';
+		}
+		$options = Arr::to_array( get_option( 'jetpack_options', array() ) );
+		if ( Arr::get_int( $options, 'id' ) > 0 ) {
+			$names[] = 'Jetpack connection';
+		}
+		return $names;
 	}
 }

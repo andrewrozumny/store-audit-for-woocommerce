@@ -80,14 +80,20 @@ final class Plugin {
 	}
 
 	/**
-	 * Whether WooCommerce is loaded or active.
+	 * Whether WooCommerce is loaded or active. This runs on plugins_loaded, when every active plugin has been
+	 * included, so the class check is reliable; the option lookups cover a WooCommerce that did not load. On a
+	 * network, a plugin activated for the whole network is listed in a different place than a per-site one.
 	 */
 	private function woocommerce_active(): bool {
 		if ( class_exists( 'WooCommerce' ) ) {
 			return true;
 		}
+		$file   = 'woocommerce/woocommerce.php';
 		$active = (array) get_option( 'active_plugins', array() );
-		return in_array( 'woocommerce/woocommerce.php', $active, true );
+		if ( in_array( $file, $active, true ) ) {
+			return true;
+		}
+		return is_multisite() && array_key_exists( $file, (array) get_site_option( 'active_sitewide_plugins', array() ) );
 	}
 
 	/**
